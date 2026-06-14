@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@/lib/supabase/server'
 
 export const maxDuration = 300
 
@@ -109,6 +110,10 @@ async function buscarTendencias(nicho: string, servico: string, tema: string): P
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
     const { profile, funil, categoria, formato, servico, tema } = await req.json() as {
       profile: Profile; funil: string; categoria: string; formato: string; servico?: string; tema?: string
     }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@/lib/supabase/server'
 
 export const maxDuration = 60
 
@@ -36,6 +37,10 @@ function buildSchema(qtd: number) {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
     const { profile, quantidade } = await req.json() as { profile: Profile; quantidade: number }
     const qtd = Math.min(30, Math.max(1, Number(quantidade) || 12))
 
