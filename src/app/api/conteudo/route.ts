@@ -13,15 +13,8 @@ const MODEL_BUSCA = 'claude-sonnet-4-6'
 type Profile = {
   negocio?: string
   nicho?: string
-  publico?: string
-  idadePublico?: string
-  essencia?: string
-  transformacao?: string
-  tomVoz?: string
-  crencas?: string
-  objecoes?: string
-  provas?: string
   servicos?: string
+  sobre?: string // sobre o negócio, público e foco
 }
 
 // ── Frameworks por categoria (o que faz o roteiro converter) ──────────────────
@@ -124,7 +117,7 @@ export async function POST(req: NextRequest) {
     if (!funil || !categoria || !formato) {
       return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 })
     }
-    if (!profile?.nicho || !profile?.negocio) {
+    if (!profile?.nicho) {
       return NextResponse.json({ error: 'Preencha o perfil de conteúdo primeiro.' }, { status: 400 })
     }
 
@@ -138,17 +131,10 @@ export async function POST(req: NextRequest) {
     }
 
     const cerebro = [
-      `- Negócio: ${profile.negocio}`,
+      profile.negocio ? `- Negócio: ${profile.negocio}` : '',
       `- Nicho: ${profile.nicho}`,
-      `- Público / cliente ideal: ${profile.publico || '—'}`,
-      profile.idadePublico ? `- Faixa etária do público: ${profile.idadePublico}` : '',
-      profile.essencia ? `- Essência/diferencial: ${profile.essencia}` : '',
-      profile.transformacao ? `- Transformação que entrega (antes → depois): ${profile.transformacao}` : '',
-      profile.tomVoz ? `- Tom de voz: ${profile.tomVoz}` : '',
-      profile.crencas ? `- Crenças/opiniões fortes do profissional: ${profile.crencas}` : '',
-      profile.objecoes ? `- Objeções comuns dos clientes: ${profile.objecoes}` : '',
-      profile.provas ? `- Provas (casos/números/depoimentos): ${profile.provas}` : '',
       profile.servicos ? `- Serviços/produtos: ${profile.servicos}` : '',
+      profile.sobre ? `- Sobre o negócio, público e foco: ${profile.sobre}` : '',
     ].filter(Boolean).join('\n')
 
     const prompt = `Você é um estrategista de conteúdo e copywriter sênior especializado em Instagram para pequenos negócios. Você cria roteiros ÚNICOS, específicos e de altíssima qualidade — nunca genéricos.

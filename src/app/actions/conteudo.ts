@@ -18,20 +18,13 @@ async function getDbUser() {
   )
 }
 
-// ── Perfil de conteúdo (o "cérebro da marca") ────────────────────────────────
+// ── Perfil de conteúdo (entrada simples do mentorado) ─────────────────────────
 
 export type ContentProfileInput = {
-  negocio: string
+  negocio?: string
   nicho: string
-  publico: string
-  idadePublico?: string
-  essencia?: string
-  transformacao?: string
-  tomVoz?: string
-  crencas?: string
-  objecoes?: string
-  provas?: string
   servicos?: string
+  sobre?: string // sobre o negócio + público + foco que ela quer seguir
 }
 
 export async function getContentProfile(): Promise<Result<ContentProfileInput | null>> {
@@ -40,7 +33,7 @@ export async function getContentProfile(): Promise<Result<ContentProfileInput | 
   try {
     const p = await prisma.contentProfile.findUnique({ where: { userId: dbUser.id } })
     if (!p) {
-      // Tenta pré-preencher a partir do site que o mentorado já cadastrou
+      // Pré-preenche a partir do site já cadastrado
       const site = await prisma.site.findFirst({
         where: { userId: dbUser.id },
         orderBy: { updatedAt: 'desc' },
@@ -52,9 +45,8 @@ export async function getContentProfile(): Promise<Result<ContentProfileInput | 
           data: {
             negocio: site.nomeNegocio,
             nicho: site.segmento,
-            publico: site.dorPrincipal || '',
-            transformacao: site.resultadoCliente || '',
             servicos: site.servicos.map(s => s.nome).join(', '),
+            sobre: [site.dorPrincipal, site.resultadoCliente].filter(Boolean).join('. '),
           },
         }
       }
@@ -63,17 +55,10 @@ export async function getContentProfile(): Promise<Result<ContentProfileInput | 
     return {
       success: true,
       data: {
-        negocio: p.negocio,
+        negocio: p.negocio ?? '',
         nicho: p.nicho,
-        publico: p.publico,
-        idadePublico: p.idadePublico ?? '',
-        essencia: p.essencia ?? '',
-        transformacao: p.transformacao ?? '',
-        tomVoz: p.tomVoz ?? '',
-        crencas: p.crencas ?? '',
-        objecoes: p.objecoes ?? '',
-        provas: p.provas ?? '',
         servicos: p.servicos ?? '',
+        sobre: p.publico ?? '', // reutiliza a coluna publico como "sobre o negócio/público/foco"
       },
     }
   } catch (e) {
@@ -84,21 +69,12 @@ export async function getContentProfile(): Promise<Result<ContentProfileInput | 
 export async function saveContentProfile(input: ContentProfileInput): Promise<Result> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
-  if (!input.negocio?.trim() || !input.nicho?.trim() || !input.publico?.trim()) {
-    return { success: false, error: 'Preencha negócio, nicho e público.' }
-  }
+  if (!input.nicho?.trim()) return { success: false, error: 'Informe o nicho.' }
   const data = {
-    negocio: input.negocio,
-    nicho: input.nicho,
-    publico: input.publico,
-    idadePublico: input.idadePublico || null,
-    essencia: input.essencia || null,
-    transformacao: input.transformacao || null,
-    tomVoz: input.tomVoz || null,
-    crencas: input.crencas || null,
-    objecoes: input.objecoes || null,
-    provas: input.provas || null,
-    servicos: input.servicos || null,
+    negocio: input.negocio?.trim() || input.nicho,
+    nicho: input.nicho.trim(),
+    servicos: input.servicos?.trim() || null,
+    publico: input.sobre?.trim() || '',
   }
   try {
     await prisma.contentProfile.upsert({
@@ -112,99 +88,97 @@ export async function saveContentProfile(input: ContentProfileInput): Promise<Re
   }
 }
 
-// ── Roteiros gerados ─────────────────────────────────────────────────────────
+// ── Planos de conteúdo (calendário de 30 dias) ────────────────────────────────
 
-export type ContentPiecePayload = {
+export type PlanItemRoteiro = {
+  gancho: string
+  estrutura: { secao: string; conteudo: string }[]
+  legenda: string
+  cta: string
+  hashtags: string[]
+  dicas?: string
+  usouTendencias?: boolean
+}
+export type PlanItem = {
+  ordem: number
+  dia: number
+  formato: string
   funil: string
   categoria: string
-  formato: string
-  tema: string
-  servico?: string
   titulo: string
-  conteudo: Prisma.InputJsonValue
+  objetivo: string
+  gancho: string
+  roteiro?: PlanItemRoteiro
 }
 
-export async function saveContentPiece(payload: ContentPiecePayload): Promise<Result<{ id: string }>> {
+export async function savePlan(quantidade: number, itens: Prisma.InputJsonValue, titulo?: string): Promise<Result<{ id: string }>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
-    const created = await prisma.contentPiece.create({
-      data: {
-        userId: dbUser.id,
-        funil: payload.funil,
-        categoria: payload.categoria,
-        formato: payload.formato,
-        tema: payload.tema,
-        servico: payload.servico || null,
-        titulo: payload.titulo || 'Roteiro sem título',
-        conteudo: payload.conteudo,
-      },
+    const created = await prisma.contentPlan.create({
+      data: { userId: dbUser.id, quantidade, itens, titulo: titulo || 'Plano de conteúdo' },
     })
     return { success: true, data: { id: created.id } }
   } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar' }
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar plano' }
   }
 }
 
-export type ContentPieceListItem = {
-  id: string
-  titulo: string
-  formato: string
-  categoria: string
-  funil: string
-  createdAt: string
-}
+export type PlanListItem = { id: string; titulo: string; quantidade: number; createdAt: string }
 
-export async function listContentPieces(): Promise<Result<ContentPieceListItem[]>> {
+export async function listPlans(): Promise<Result<PlanListItem[]>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
-    const rows = await prisma.contentPiece.findMany({
+    const rows = await prisma.contentPlan.findMany({
       where: { userId: dbUser.id },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, titulo: true, formato: true, categoria: true, funil: true, createdAt: true },
-      take: 50,
+      select: { id: true, titulo: true, quantidade: true, createdAt: true },
+      take: 30,
     })
-    return {
-      success: true,
-      data: rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })),
-    }
+    return { success: true, data: rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })) }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao listar' }
   }
 }
 
-export async function getContentPiece(id: string): Promise<Result<Record<string, unknown>>> {
+export async function getPlan(id: string): Promise<Result<{ id: string; titulo: string; quantidade: number; itens: PlanItem[] }>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
-    const row = await prisma.contentPiece.findUnique({ where: { id } })
-    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Roteiro não encontrado' }
-    return {
-      success: true,
-      data: {
-        id: row.id,
-        funil: row.funil,
-        categoria: row.categoria,
-        formato: row.formato,
-        tema: row.tema,
-        servico: row.servico ?? '',
-        titulo: row.titulo,
-        conteudo: row.conteudo,
-      },
-    }
+    const row = await prisma.contentPlan.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Plano não encontrado' }
+    return { success: true, data: { id: row.id, titulo: row.titulo, quantidade: row.quantidade, itens: (row.itens as unknown as PlanItem[]) ?? [] } }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao carregar' }
   }
 }
 
-export async function deleteContentPiece(id: string): Promise<Result> {
+// Grava o roteiro completo de um item específico do plano (gerado sob demanda)
+export async function savePlanItemRoteiro(planId: string, ordem: number, roteiro: PlanItemRoteiro): Promise<Result> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
-    const row = await prisma.contentPiece.findUnique({ where: { id } })
-    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Roteiro não encontrado' }
-    await prisma.contentPiece.delete({ where: { id } })
+    const row = await prisma.contentPlan.findUnique({ where: { id: planId } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Plano não encontrado' }
+    const itens = (row.itens as unknown as PlanItem[]) ?? []
+    const idx = itens.findIndex(i => i.ordem === ordem)
+    if (idx === -1) return { success: false, error: 'Item não encontrado' }
+    itens[idx] = { ...itens[idx], roteiro }
+    await prisma.contentPlan.update({ where: { id: planId }, data: { itens: itens as unknown as Prisma.InputJsonValue } })
+    return { success: true, data: undefined }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar roteiro' }
+  }
+}
+
+export async function deletePlan(id: string): Promise<Result> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const row = await prisma.contentPlan.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Plano não encontrado' }
+    await prisma.contentPlan.delete({ where: { id } })
     return { success: true, data: undefined }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir' }

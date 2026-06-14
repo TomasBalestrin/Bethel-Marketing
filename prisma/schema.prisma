@@ -33,8 +33,26 @@ model User {
   sites          Site[]
   contentProfile ContentProfile?
   contentPieces  ContentPiece[]
+  contentPlans   ContentPlan[]
 
   @@map("users")
+}
+
+model ContentPlan {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  titulo     String  @default("Plano de conteúdo")
+  quantidade Int
+  // Array de itens do calendário; cada item pode conter o roteiro completo (gerado sob demanda)
+  itens      Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("content_plans")
 }
 
 model ContentProfile {
