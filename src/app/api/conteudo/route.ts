@@ -36,17 +36,23 @@ Termine com CTA direto e específico (chamar no direct, agendar, link na bio). U
 
 // ── Estrutura esperada por formato ────────────────────────────────────────────
 const FORMATOS: Record<string, string> = {
-  reels: `REELS (vídeo curto, 15-45s).
-A "estrutura" deve ser uma sequência de CENAS. Cada item: secao = "Cena 1 (0-3s)", "Cena 2", etc; conteudo = o que falar/mostrar + sugestão de texto na tela.
-O "gancho" é a primeira frase/cena (primeiros 3 segundos) que prende. Em "dicas", sugira tipo de áudio/trend e enquadramento.`,
+  reels: `REELS (vídeo curto, 15-45s). Gere de 4 a 6 CENAS cobrindo o vídeo inteiro.
+Para CADA cena preencha:
+- secao = a cena com o INTERVALO DE TEMPO. Ex: "Cena 1 (0-3s)", "Cena 2 (3-8s)", "Cena 3 (8-15s)"… cubra do início ao fim.
+- fala = EXATAMENTE o que a pessoa deve FALAR nesse intervalo (roteiro de fala, palavra por palavra, como um teleprompter). Se a cena for sem fala, escreva "(sem fala)".
+- conteudo = o TEXTO QUE APARECE NA TELA nessa cena (legenda/letreiro), curto.
+- imagem = o que MOSTRAR/GRAVAR nessa cena (enquadramento, ação, b-roll).
+O "gancho" é a fala/texto dos primeiros 3 segundos. Em "dicas", sugira áudio/trend e ritmo de edição.`,
   carrossel: `CARROSSEL (7 a 9 slides — gere um item por SLIDE, no mínimo 7).
-REGRA CRÍTICA: o campo "conteudo" de cada slide deve ser o TEXTO EXATO E FINAL que vai aparecer escrito naquele slide — pronto pra copiar e colar na arte. NÃO escreva instruções ("apresente o problema", "fale sobre…") nem descrições; escreva a frase pronta, como ela aparece pro seguidor.
-Cada item: secao = "Slide 1", "Slide 2"…; conteudo = a copy literal daquele slide (curta, impactante, 1 ideia só — pode ter um título em destaque + 1 linha de apoio).
-Estrutura típica: Slide 1 = capa/gancho que para o scroll; Slides 2 a penúltimo = desenvolvem a ideia, um ponto por slide; último slide = CTA.
-Em "dicas", oriente só o visual (cores, imagem, destaque). NÃO repita o texto dos slides nas dicas.`,
+Para CADA slide preencha:
+- secao = "Slide 1", "Slide 2"…
+- conteudo = o TEXTO EXATO E FINAL escrito no slide, pronto pra copiar e colar na arte (curto, 1 ideia só, pode ter título em destaque + 1 linha de apoio). NÃO escreva instruções/descrições ("apresente o problema"); escreva a frase pronta como o seguidor vê.
+- imagem = a sugestão de IMAGEM/VISUAL daquele slide específico (o que aparece de fundo/foto/ilustração).
+- fala = deixe "(não se aplica)".
+Estrutura: Slide 1 = capa/gancho que para o scroll; slides do meio = um ponto por slide; último slide = CTA. Em "dicas", oriente só estilo visual geral (cores, fontes).`,
   imagem: `POST DE IMAGEM ÚNICA.
-A "estrutura" deve ter 1-2 itens: secao = "Headline" e (opcional) "Apoio"; conteudo = o texto que vai na arte.
-O "gancho" é a headline principal. A "legenda" aprofunda a ideia. Em "dicas", descreva o conceito visual da arte.`,
+A "estrutura" deve ter 1-2 itens: secao = "Headline" e (opcional) "Apoio"; conteudo = o texto exato que vai na arte; imagem = o conceito visual da arte (foto/fundo/elementos); fala = "(não se aplica)".
+O "gancho" é a headline principal. A "legenda" aprofunda a ideia.`,
 }
 
 const FUNIL_LABEL: Record<string, string> = {
@@ -67,8 +73,10 @@ function buildSchema() {
         items: {
           type: 'object',
           properties: {
-            secao: { type: 'string', description: 'Rótulo da seção (ex: "Cena 1 (0-3s)", "Slide 2", "Headline")' },
-            conteudo: { type: 'string', description: 'No carrossel: o TEXTO LITERAL e final que vai escrito no slide (pronto pra colar), nunca uma descrição do que fazer. No reels: a fala + texto na tela daquela cena.' },
+            secao: { type: 'string', description: 'Rótulo da seção. Reels: a cena com tempo ("Cena 1 (0-3s)"). Carrossel: "Slide 1", "Slide 2"… Imagem: "Headline"/"Apoio".' },
+            fala: { type: 'string', description: 'Reels: o que FALAR exatamente nesse intervalo (roteiro de fala). Carrossel/imagem: "(não se aplica)".' },
+            conteudo: { type: 'string', description: 'O TEXTO LITERAL. Carrossel: a copy final do slide (pronta pra colar). Reels: o texto que aparece na tela. Imagem: o texto da arte.' },
+            imagem: { type: 'string', description: 'Sugestão de imagem/visual dessa parte. Carrossel: a imagem do slide. Reels: o que mostrar/gravar na cena. Imagem: o conceito da arte.' },
           },
           required: ['secao', 'conteudo'],
         },
@@ -184,7 +192,17 @@ Preencha a ferramenta create_content com o roteiro completo.`
       titulo: String(input.titulo ?? ''),
       gancho: String(input.gancho ?? ''),
       estrutura: Array.isArray(input.estrutura)
-        ? (input.estrutura as Record<string, unknown>[]).map(s => ({ secao: String(s.secao ?? ''), conteudo: String(s.conteudo ?? '') }))
+        ? (input.estrutura as Record<string, unknown>[]).map(s => {
+            const fala = String(s.fala ?? '').trim()
+            const imagem = String(s.imagem ?? '').trim()
+            const naoAplica = /não se aplica|nao se aplica|^\(?sem fala\)?$|^-$|^—$/i
+            return {
+              secao: String(s.secao ?? ''),
+              conteudo: String(s.conteudo ?? ''),
+              ...(fala && !naoAplica.test(fala) ? { fala } : {}),
+              ...(imagem && !naoAplica.test(imagem) ? { imagem } : {}),
+            }
+          })
         : [],
       legenda: String(input.legenda ?? ''),
       cta: String(input.cta ?? ''),

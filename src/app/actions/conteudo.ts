@@ -75,7 +75,7 @@ export async function saveContentProfile(input: ContentProfileInput): Promise<Re
 
 export type PlanItemRoteiro = {
   gancho: string
-  estrutura: { secao: string; conteudo: string }[]
+  estrutura: { secao: string; conteudo: string; fala?: string; imagem?: string }[]
   legenda: string
   cta: string
   hashtags: string[]

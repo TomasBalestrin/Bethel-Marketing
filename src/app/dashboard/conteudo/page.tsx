@@ -153,7 +153,12 @@ export default function ConteudoPage() {
     const r = it.roteiro; if (!r) return
     const txt = [
       `GANCHO: ${r.gancho}`, '',
-      ...r.estrutura.map(s => `${s.secao}: ${s.conteudo}`), '',
+      ...r.estrutura.map(s => [
+        s.secao,
+        s.fala ? `  Falar: ${s.fala}` : '',
+        s.conteudo ? `  ${s.fala ? 'Texto na tela' : 'Texto'}: ${s.conteudo}` : '',
+        s.imagem ? `  Imagem: ${s.imagem}` : '',
+      ].filter(Boolean).join('\n')), '',
       `CTA: ${r.cta}`, '', 'LEGENDA:', r.legenda, '',
       r.hashtags.map(h => `#${h}`).join(' '),
     ].join('\n')
@@ -322,12 +327,22 @@ export default function ConteudoPage() {
                         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">🎣 Gancho</p>
                         <p className="text-sm text-gray-900 font-medium">{item.roteiro.gancho}</p>
                       </div>
-                      <div className="space-y-2">
-                        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">📝 Roteiro</p>
+                      <div className="space-y-2.5">
+                        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{item.formato === 'reels' ? '🎬 Roteiro por cena' : item.formato === 'carrossel' ? '🖼️ Slides' : '📝 Roteiro'}</p>
                         {item.roteiro.estrutura.map((s, i) => (
-                          <div key={i} className="border-l-2 border-indigo-200 pl-3">
+                          <div key={i} className="border-l-2 border-indigo-200 pl-3 py-0.5">
                             <p className="text-xs font-semibold text-indigo-600">{s.secao}</p>
-                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{s.conteudo}</p>
+                            {s.fala && (
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap mt-0.5"><span className="text-gray-400">🎙️ Falar:</span> {s.fala}</p>
+                            )}
+                            {s.conteudo && (
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap mt-0.5">
+                                <span className="text-gray-400">{s.fala ? '🔤 Texto na tela:' : '✍️ Texto:'}</span> {s.conteudo}
+                              </p>
+                            )}
+                            {s.imagem && (
+                              <p className="text-xs text-gray-500 whitespace-pre-wrap mt-0.5"><span className="text-gray-400">🖼️ Imagem:</span> {s.imagem}</p>
+                            )}
                           </div>
                         ))}
                       </div>
