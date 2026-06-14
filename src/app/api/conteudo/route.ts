@@ -82,18 +82,17 @@ function buildSchema() {
 // Busca tendências atuais via web search (só usada na categoria "viral")
 async function buscarTendencias(nicho: string, servico: string, tema: string): Promise<string> {
   try {
-    const prompt = `Pesquise na web tendências, assuntos e formatos em ALTA AGORA no Instagram/redes sociais que sejam relevantes para o nicho "${nicho}"${servico ? `, especialmente sobre "${servico}"` : ''}${tema ? `, considerando o tema "${tema}"` : ''}.
-Liste de 3 a 5 ganchos/temas atuais com potencial de viralizar, cada um em 1 linha. Foque em coisas recentes e específicas, não genéricas.`
+    const prompt = `Faça UMA única busca na web e liste 3 ganchos/temas em alta AGORA, relevantes para o nicho "${nicho}"${servico ? ` (foco em "${servico}")` : ''}. Uma linha cada, específicos e recentes. Não faça mais de uma busca.`
 
     let messages: Anthropic.MessageParam[] = [{ role: 'user', content: prompt }]
     let texto = ''
     // Loop curto para lidar com pause_turn da ferramenta server-side
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const res = await client.messages.create({
         model: MODEL_BUSCA,
-        max_tokens: 1500,
+        max_tokens: 700,
         // web search é enviado no corpo da requisição; o SDK 0.36 não tipa esse tool
-        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }] as unknown as Anthropic.Tool[],
+        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 1 }] as unknown as Anthropic.Tool[],
         messages,
       })
       for (const block of res.content) {
