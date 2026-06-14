@@ -39,9 +39,11 @@ const FORMATOS: Record<string, string> = {
   reels: `REELS (vídeo curto, 15-45s).
 A "estrutura" deve ser uma sequência de CENAS. Cada item: secao = "Cena 1 (0-3s)", "Cena 2", etc; conteudo = o que falar/mostrar + sugestão de texto na tela.
 O "gancho" é a primeira frase/cena (primeiros 3 segundos) que prende. Em "dicas", sugira tipo de áudio/trend e enquadramento.`,
-  carrossel: `CARROSSEL (6 a 9 slides).
-A "estrutura" deve ter um item por SLIDE. Cada item: secao = "Slide 1", "Slide 2"…; conteudo = o texto do slide (curto, 1 ideia por slide).
-O "gancho" é o slide 1 (precisa parar o scroll). O último slide deve ter o CTA. Em "dicas", oriente o visual.`,
+  carrossel: `CARROSSEL (7 a 9 slides — gere um item por SLIDE, no mínimo 7).
+REGRA CRÍTICA: o campo "conteudo" de cada slide deve ser o TEXTO EXATO E FINAL que vai aparecer escrito naquele slide — pronto pra copiar e colar na arte. NÃO escreva instruções ("apresente o problema", "fale sobre…") nem descrições; escreva a frase pronta, como ela aparece pro seguidor.
+Cada item: secao = "Slide 1", "Slide 2"…; conteudo = a copy literal daquele slide (curta, impactante, 1 ideia só — pode ter um título em destaque + 1 linha de apoio).
+Estrutura típica: Slide 1 = capa/gancho que para o scroll; Slides 2 a penúltimo = desenvolvem a ideia, um ponto por slide; último slide = CTA.
+Em "dicas", oriente só o visual (cores, imagem, destaque). NÃO repita o texto dos slides nas dicas.`,
   imagem: `POST DE IMAGEM ÚNICA.
 A "estrutura" deve ter 1-2 itens: secao = "Headline" e (opcional) "Apoio"; conteudo = o texto que vai na arte.
 O "gancho" é a headline principal. A "legenda" aprofunda a ideia. Em "dicas", descreva o conceito visual da arte.`,
@@ -66,7 +68,7 @@ function buildSchema() {
           type: 'object',
           properties: {
             secao: { type: 'string', description: 'Rótulo da seção (ex: "Cena 1 (0-3s)", "Slide 2", "Headline")' },
-            conteudo: { type: 'string', description: 'O texto/conteúdo daquela seção' },
+            conteudo: { type: 'string', description: 'No carrossel: o TEXTO LITERAL e final que vai escrito no slide (pronto pra colar), nunca uma descrição do que fazer. No reels: a fala + texto na tela daquela cena.' },
           },
           required: ['secao', 'conteudo'],
         },
