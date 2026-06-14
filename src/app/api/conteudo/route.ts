@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const MODEL_GERACAO = 'claude-opus-4-8'
+// sonnet-4-6 cabe no tempo da serverless e tem ótima qualidade de copy
+// (opus-4-8 estourava o limite de execução no caminho viral com web search)
+const MODEL_GERACAO = 'claude-sonnet-4-6'
 const MODEL_BUSCA = 'claude-sonnet-4-6'
 
 type Profile = {
@@ -98,7 +100,7 @@ Liste de 3 a 5 ganchos/temas atuais com potencial de viralizar, cada um em 1 lin
         model: MODEL_BUSCA,
         max_tokens: 1500,
         // web search é enviado no corpo da requisição; o SDK 0.36 não tipa esse tool
-        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }] as unknown as Anthropic.Tool[],
+        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 2 }] as unknown as Anthropic.Tool[],
         messages,
       })
       for (const block of res.content) {
