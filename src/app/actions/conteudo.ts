@@ -32,26 +32,9 @@ export async function getContentProfile(): Promise<Result<ContentProfileInput | 
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
     const p = await prisma.contentProfile.findUnique({ where: { userId: dbUser.id } })
-    if (!p) {
-      // Pré-preenche a partir do site já cadastrado
-      const site = await prisma.site.findFirst({
-        where: { userId: dbUser.id },
-        orderBy: { updatedAt: 'desc' },
-        include: { servicos: { orderBy: { ordem: 'asc' } } },
-      })
-      if (site) {
-        return {
-          success: true,
-          data: {
-            negocio: site.nomeNegocio,
-            nicho: site.segmento,
-            servicos: site.servicos.map(s => s.nome).join(', '),
-            sobre: [site.dorPrincipal, site.resultadoCliente].filter(Boolean).join('. '),
-          },
-        }
-      }
-      return { success: true, data: null }
-    }
+    // O gerador de roteiros é independente do criador de sites: o mentorado
+    // preenche o próprio perfil; não puxamos dados do Site.
+    if (!p) return { success: true, data: null }
     return {
       success: true,
       data: {
