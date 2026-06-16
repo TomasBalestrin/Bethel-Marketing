@@ -227,12 +227,24 @@ export default function ConteudoPage() {
         {!carregandoPerfil && profiles.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide mr-1">Instagram:</span>
-            {profiles.map(p => (
-              <button key={p.id} onClick={() => carregarPerfil(p.id)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${activeId === p.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                {profileLabel(p)}
-              </button>
-            ))}
+            {profiles.map(p => {
+              const ativo = activeId === p.id
+              return (
+                <span key={p.id}
+                  className={`inline-flex items-center rounded-full text-sm font-medium border transition-colors ${ativo ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  <button onClick={() => carregarPerfil(p.id)} className="pl-3 py-1.5 pr-1">
+                    {profileLabel(p)}
+                  </button>
+                  {p.instagram && (
+                    <a href={`https://instagram.com/${p.instagram}`} target="_blank" rel="noopener noreferrer"
+                      title="Abrir no Instagram"
+                      className={`pr-3 pl-1 py-1.5 ${ativo ? 'text-white/80 hover:text-white' : 'text-gray-400 hover:text-indigo-600'}`}>
+                      ↗
+                    </a>
+                  )}
+                </span>
+              )
+            })}
             <button onClick={novoPerfil}
               className="px-3 py-1.5 rounded-full text-sm font-medium border border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50 transition-colors">
               + Adicionar Instagram
