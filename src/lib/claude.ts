@@ -101,6 +101,12 @@ export async function generateSiteHTML(data: SiteData): Promise<string> {
 
   const depoimentosImagens = data.depoimentos.map(d => d.imagemUrl)
 
+  // Aceita 1 ou vários @ (ex: 2 profissionais), separados por vírgula/espaço/;
+  const instagramHandles = (data.instagram ?? '')
+    .split(/[,;\s]+/)
+    .map(h => h.replace('@', '').trim())
+    .filter(Boolean)
+
   const whatsappNum = data.whatsapp.replace(/\D/g, '')
   const whatsappLink = `https://wa.me/55${whatsappNum}?text=${encodeURIComponent(data.whatsappMensagem)}`
 
@@ -153,7 +159,7 @@ CONTATO:
 - WhatsApp: ${data.whatsapp} | Link: ${whatsappLink}
 ${data.registros.length > 0 ? `- Registros profissionais: ${data.registros.map((r) => `${r.tipo} ${r.numero}`).join(' | ')}` : ''}
 - Mensagem padrão: ${data.whatsappMensagem}
-${data.instagram ? `- Instagram: @${data.instagram.replace('@', '')}` : ''}
+${instagramHandles.length ? `- Instagram (${instagramHandles.length > 1 ? `${instagramHandles.length} perfis — crie um link separado para CADA um` : '1 perfil'}): ${instagramHandles.map(h => `@${h}`).join(', ')}` : ''}
 - Horário: ${data.horarioAtendimento}
 
 IDENTIDADE VISUAL:
@@ -200,7 +206,7 @@ O header deve conter EXATAMENTE os elementos acima — nenhum elemento a mais.
 6. ${depoimentosImagens.length > 0 ? `<section id="depoimentos"> — título e subtítulo CENTRALIZADOS, carrossel de imagens de depoimentos. Use as ${depoimentosImagens.length} URLs fornecidas como <img> com estes estilos EXATOS: display:block; margin:0 auto; width:auto; max-width:100%; max-height:480px; height:auto; object-fit:contain; border-radius:12px. O teto de altura (max-height:480px) é OBRIGATÓRIO para os prints não ficarem gigantes — a imagem reduz mantendo a proporção, sem cortar e sem espaços em branco. O carrossel deve ter um wrapper externo com position:relative; max-width:440px; margin:0 auto; padding:0 48px (para reservar espaço lateral às setas) — largura menor porque depoimentos costumam ser prints verticais. As setas prev/next devem ser position:absolute; top:50%; transform:translateY(-50%) FORA da imagem, posicionadas no padding lateral: left:0 e right:0 com width:40px; height:40px. A imagem fica dentro de um container interno sem padding, centralizada. Assim as setas ficam ao lado das fotos, nunca sobre elas. Adicione indicadores de pontos abaixo. Carrossel responsivo e touch-friendly.` : '<!-- sem depoimentos -->'}
 7. <section id="cta"> — estrutura obrigatória em duas partes dentro de um container (max-width:600px; margin:0 auto; text-align:center):
    PARTE 1 (centralizada): badge, título h2, subtítulo p, e botão CTA — todos com text-align:center e o botão com display:inline-block ou display:block; margin:0 auto
-   PARTE 2 (lista de contato): div separado com text-align:left, contendo os itens de endereço, horário e instagram, cada item com display:flex; align-items:center; gap:12px; margin-bottom:12px
+   PARTE 2 (lista de contato): div separado com text-align:left, contendo os itens de endereço, horário e Instagram, cada item com display:flex; align-items:center; gap:12px; margin-bottom:12px. ${instagramHandles.length > 1 ? `Há ${instagramHandles.length} perfis de Instagram — mostre UM link clicável para CADA um (ex: @${instagramHandles[0]} e @${instagramHandles[1]}), cada link apontando para https://instagram.com/<perfil>.` : 'O Instagram deve ser um link clicável para https://instagram.com/<perfil>.'}
    Use fundo claro (cor light da paleta ou branco) com texto escuro para garantir contraste
 8. <footer> — dados de contato, horário, Instagram (se houver)${data.registros.length > 0 ? `, registros profissionais (${data.registros.map((r) => `${r.tipo} ${r.numero}`).join(', ')})` : ''}, copyright. IMPORTANTE: o footer deve ter padding-top mínimo de 48px para não ficar colado no botão da seção CTA acima
 
@@ -254,7 +260,7 @@ REQUISITOS TÉCNICOS:
     "priceRange": "$$",
     "foundingDate": "${new Date().getFullYear() - data.anosNoMercado}",
     ${data.totalClientes ? `"aggregateRating": { "@type": "AggregateRating", "ratingValue": "5", "reviewCount": "${data.totalClientes}" },` : ''}
-    "sameAs": [${data.instagram ? `"https://instagram.com/${data.instagram.replace('@', '')}"` : ''}]
+    "sameAs": [${instagramHandles.map(h => `"https://instagram.com/${h}"`).join(', ')}]
   }
 - Suave scroll behavior: html { scroll-behavior: smooth }
 - Cores de texto com contraste adequado para acessibilidade

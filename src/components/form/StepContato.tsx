@@ -43,8 +43,9 @@ export default function StepContato() {
         <Label htmlFor="instagram">Instagram (opcional)</Label>
         <div className="relative mt-1.5">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">@</span>
-          <Input id="instagram" {...register('instagram')} className="pl-7" placeholder="seuperfil" />
+          <Input id="instagram" {...register('instagram')} className="pl-7" placeholder="perfil1, perfil2" />
         </div>
+        <p className="text-xs text-gray-400 mt-1">Tem mais de um profissional? Separe os @ por vírgula (ex: drafulana, drbeltrano) — cada um vira um link no site.</p>
       </div>
 
       <div>
