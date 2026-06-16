@@ -2,20 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import {
+  listContentProfiles,
   getContentProfile,
   saveContentProfile,
+  deleteContentProfile,
   savePlan,
   listPlans,
   getPlan,
   deletePlan,
   savePlanItemRoteiro,
   type ContentProfileInput,
+  type ProfileSummary,
   type PlanListItem,
   type PlanItem,
   type PlanItemRoteiro,
 } from '@/app/actions/conteudo'
 
-const EMPTY_PROFILE: ContentProfileInput = { negocio: '', nicho: '', servicos: '', sobre: '' }
+const EMPTY_PROFILE: ContentProfileInput = { id: undefined, instagram: '', negocio: '', nicho: '', servicos: '', sobre: '' }
 
 const QUANTIDADES = [8, 12, 16, 20, 30]
 
@@ -36,9 +39,14 @@ const CATEGORIA_META: Record<string, { emoji: string; label: string }> = {
   venda: { emoji: '🎯', label: 'Venda' },
 }
 
+function profileLabel(p: ProfileSummary) {
+  return p.instagram ? `@${p.instagram}` : (p.negocio || p.nicho)
+}
+
 export default function ConteudoPage() {
+  const [profiles, setProfiles] = useState<ProfileSummary[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
   const [profile, setProfile] = useState<ContentProfileInput>(EMPTY_PROFILE)
-  const [profileSalvo, setProfileSalvo] = useState(false)
   const [profileAberto, setProfileAberto] = useState(false)
   const [salvandoPerfil, setSalvandoPerfil] = useState(false)
   const [carregandoPerfil, setCarregandoPerfil] = useState(true)
@@ -51,7 +59,7 @@ export default function ConteudoPage() {
   const [planId, setPlanId] = useState<string | null>(null)
   const [planTitulo, setPlanTitulo] = useState('')
   const [itens, setItens] = useState<PlanItem[]>([])
-  const [expandido, setExpandido] = useState<number | null>(null) // ordem aberto
+  const [expandido, setExpandido] = useState<number | null>(null)
   const [gerandoItem, setGerandoItem] = useState<number | null>(null)
   const [copiado, setCopiado] = useState('')
 
@@ -61,10 +69,10 @@ export default function ConteudoPage() {
 
   useEffect(() => {
     (async () => {
-      const res = await getContentProfile()
-      if (res.success && res.data) {
-        setProfile({ ...EMPTY_PROFILE, ...res.data })
-        setProfileSalvo(true)
+      const res = await listContentProfiles()
+      if (res.success && res.data.length > 0) {
+        setProfiles(res.data)
+        await carregarPerfil(res.data[0].id)
       } else {
         setProfileAberto(true)
       }
@@ -72,19 +80,57 @@ export default function ConteudoPage() {
     })()
   }, [])
 
+  async function refreshProfiles(): Promise<ProfileSummary[]> {
+    const res = await listContentProfiles()
+    if (res.success) { setProfiles(res.data); return res.data }
+    return []
+  }
+
+  async function carregarPerfil(id: string) {
+    const res = await getContentProfile(id)
+    if (res.success && res.data) {
+      setProfile(res.data)
+      setActiveId(id)
+      setProfileAberto(false)
+      // troca de Instagram limpa o plano atual em tela
+      setItens([]); setPlanId(null); setExpandido(null); setErro('')
+    }
+  }
+
+  function novoPerfil() {
+    setProfile({ ...EMPTY_PROFILE })
+    setActiveId(null)
+    setProfileAberto(true)
+    setItens([]); setPlanId(null); setExpandido(null); setErro('')
+  }
+
   async function salvarPerfil() {
     setSalvandoPerfil(true); setErro('')
     try {
-      const res = await saveContentProfile(profile)
-      if (res.success) { setProfileSalvo(true); setProfileAberto(false) }
-      else setErro(res.error)
+      const res = await saveContentProfile({ ...profile, id: activeId ?? undefined })
+      if (res.success) {
+        setActiveId(res.data.id)
+        await refreshProfiles()
+        setProfile(p => ({ ...p, id: res.data.id }))
+        setProfileAberto(false)
+      } else setErro(res.error)
     } finally { setSalvandoPerfil(false) }
   }
 
+  async function excluirPerfil() {
+    if (!activeId) { novoPerfil(); return }
+    if (!confirm('Excluir este Instagram e seus dados?')) return
+    const res = await deleteContentProfile(activeId)
+    if (!res.success) { alert(res.error); return }
+    const list = await refreshProfiles()
+    if (list.length > 0) await carregarPerfil(list[0].id)
+    else novoPerfil()
+  }
+
   async function gerarPlano() {
-    if (!profile.nicho?.trim()) { setErro('Preencha pelo menos o nicho no perfil.'); setProfileAberto(true); return }
+    if (!profile.nicho?.trim()) { setErro('Preencha pelo menos o nicho.'); setProfileAberto(true); return }
     setGerandoPlano(true); setErro(''); setItens([]); setPlanId(null); setExpandido(null)
-    const msgs = ['🧠 Analisando seu negócio...', '🗓️ Montando o calendário de 30 dias...', '🎯 Distribuindo topo, meio e fundo...', '🚀 Finalizando o plano...']
+    const msgs = ['🧠 Analisando o negócio...', '🗓️ Montando o calendário de 30 dias...', '🎯 Distribuindo topo, meio e fundo...', '🚀 Finalizando o plano...']
     let i = 0; setLoadingMsg(msgs[0])
     const interval = setInterval(() => { i = (i + 1) % msgs.length; setLoadingMsg(msgs[i]) }, 2500)
     try {
@@ -94,10 +140,8 @@ export default function ConteudoPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erro ao gerar plano')
-      setItens(data.itens)
-      setPlanTitulo(data.titulo)
-      // Salva o plano automaticamente
-      const saved = await savePlan(quantidade, data.itens, data.titulo)
+      setItens(data.itens); setPlanTitulo(data.titulo)
+      const saved = await savePlan({ quantidade, itens: data.itens, titulo: data.titulo, profileId: activeId ?? undefined, instagram: profile.instagram })
       if (saved.success) setPlanId(saved.data.id)
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao gerar plano')
@@ -122,9 +166,7 @@ export default function ConteudoPage() {
       if (planId) savePlanItemRoteiro(planId, item.ordem, roteiro)
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao gerar roteiro')
-    } finally {
-      setGerandoItem(null)
-    }
+    } finally { setGerandoItem(null) }
   }
 
   async function abrirHistorico() {
@@ -181,15 +223,34 @@ export default function ConteudoPage() {
           </button>
         </div>
 
+        {/* Seletor de Instagram / perfis */}
+        {!carregandoPerfil && profiles.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide mr-1">Instagram:</span>
+            {profiles.map(p => (
+              <button key={p.id} onClick={() => carregarPerfil(p.id)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${activeId === p.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                {profileLabel(p)}
+              </button>
+            ))}
+            <button onClick={novoPerfil}
+              className="px-3 py-1.5 rounded-full text-sm font-medium border border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50 transition-colors">
+              + Adicionar Instagram
+            </button>
+          </div>
+        )}
+
         {/* Perfil */}
         <div className="bg-white border border-gray-200 rounded-xl mb-5">
           <button onClick={() => setProfileAberto(o => !o)} className="w-full flex items-center justify-between px-5 py-4 text-left">
             <div className="flex items-center gap-2">
               <span className="text-lg">🧠</span>
               <div>
-                <p className="font-semibold text-gray-900 text-sm">Sobre o seu negócio</p>
+                <p className="font-semibold text-gray-900 text-sm">
+                  {activeId ? (profile.instagram ? `@${profile.instagram}` : profile.negocio || 'Perfil') : 'Novo Instagram'}
+                </p>
                 <p className="text-xs text-gray-500">
-                  {carregandoPerfil ? 'Carregando...' : profileSalvo ? '✅ Preenchido' : '⚠️ Preencha para a IA gerar o plano'}
+                  {carregandoPerfil ? 'Carregando...' : activeId ? '✅ Perfil salvo' : '⚠️ Preencha e salve para gerar o plano'}
                 </p>
               </div>
             </div>
@@ -197,17 +258,26 @@ export default function ConteudoPage() {
           </button>
           {profileAberto && (
             <div className="px-5 pb-5 border-t border-gray-100 pt-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Nome do negócio (opcional)</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Instagram (@)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">@</span>
+                    <input value={profile.instagram ?? ''} onChange={e => setProfile(p => ({ ...p, instagram: e.target.value.replace('@', '') }))}
+                      placeholder="seuperfil"
+                      className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Nome do negócio</label>
                   <input value={profile.negocio ?? ''} onChange={e => setProfile(p => ({ ...p, negocio: e.target.value }))}
-                    placeholder="Ex: Clínica Sorria Mais"
+                    placeholder="Ex: Espaço Liss"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1 block">Nicho *</label>
                   <input value={profile.nicho} onChange={e => setProfile(p => ({ ...p, nicho: e.target.value }))}
-                    placeholder="Ex: Odontologia"
+                    placeholder="Ex: Estética"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
               </div>
@@ -220,13 +290,21 @@ export default function ConteudoPage() {
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-1 block">Sobre o negócio, público e foco</label>
                 <textarea value={profile.sobre ?? ''} onChange={e => setProfile(p => ({ ...p, sobre: e.target.value }))} rows={4}
-                  placeholder="Fale sobre o seu negócio, quem é o seu público e qual foco você quer seguir (ex: atrair pacientes para estética, posicionar como referência em implantes...)"
+                  placeholder="Fale sobre o negócio, quem é o público e qual foco quer seguir"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
               </div>
-              <button onClick={salvarPerfil} disabled={salvandoPerfil}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 transition-all">
-                {salvandoPerfil ? '⏳ Salvando...' : '💾 Salvar'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={salvarPerfil} disabled={salvandoPerfil}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 transition-all">
+                  {salvandoPerfil ? '⏳ Salvando...' : '💾 Salvar'}
+                </button>
+                {(activeId || profiles.length > 0) && (
+                  <button onClick={excluirPerfil}
+                    className="px-3 py-2.5 rounded-xl text-sm text-gray-500 border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all">
+                    🗑️ Excluir
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -272,9 +350,7 @@ export default function ConteudoPage() {
         {/* Calendário */}
         {itens.length > 0 && !gerandoPlano && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="font-semibold text-gray-900">{planTitulo || 'Plano de conteúdo'} <span className="text-gray-400 font-normal text-sm">• {itens.length} conteúdos</span></p>
-            </div>
+            <p className="font-semibold text-gray-900">{planTitulo || 'Plano de conteúdo'} <span className="text-gray-400 font-normal text-sm">• {itens.length} conteúdos</span></p>
 
             {itens.map(item => {
               const fmt = FORMATO_META[item.formato] ?? { emoji: '📄', label: item.formato }
@@ -332,17 +408,9 @@ export default function ConteudoPage() {
                         {item.roteiro.estrutura.map((s, i) => (
                           <div key={i} className="border-l-2 border-indigo-200 pl-3 py-0.5">
                             <p className="text-xs font-semibold text-indigo-600">{s.secao}</p>
-                            {s.fala && (
-                              <p className="text-sm text-gray-700 whitespace-pre-wrap mt-0.5"><span className="text-gray-400">🎙️ Falar:</span> {s.fala}</p>
-                            )}
-                            {s.conteudo && (
-                              <p className="text-sm text-gray-700 whitespace-pre-wrap mt-0.5">
-                                <span className="text-gray-400">{s.fala ? '🔤 Texto na tela:' : '✍️ Texto:'}</span> {s.conteudo}
-                              </p>
-                            )}
-                            {s.imagem && (
-                              <p className="text-xs text-gray-500 whitespace-pre-wrap mt-0.5"><span className="text-gray-400">🖼️ Imagem:</span> {s.imagem}</p>
-                            )}
+                            {s.fala && <p className="text-sm text-gray-700 whitespace-pre-wrap mt-0.5"><span className="text-gray-400">🎙️ Falar:</span> {s.fala}</p>}
+                            {s.conteudo && <p className="text-sm text-gray-700 whitespace-pre-wrap mt-0.5"><span className="text-gray-400">{s.fala ? '🔤 Texto na tela:' : '✍️ Texto:'}</span> {s.conteudo}</p>}
+                            {s.imagem && <p className="text-xs text-gray-500 whitespace-pre-wrap mt-0.5"><span className="text-gray-400">🖼️ Imagem:</span> {s.imagem}</p>}
                           </div>
                         ))}
                       </div>
@@ -393,7 +461,7 @@ export default function ConteudoPage() {
                       <span className="text-lg flex-shrink-0">🗓️</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{p.titulo}</p>
-                        <p className="text-xs text-gray-400">{p.quantidade} conteúdos • {new Date(p.createdAt).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-xs text-gray-400">{p.instagram ? `@${p.instagram} • ` : ''}{p.quantidade} conteúdos • {new Date(p.createdAt).toLocaleDateString('pt-BR')}</p>
                       </div>
                       <button onClick={e => excluirPlano(p.id, e)}
                         className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all flex-shrink-0 px-2 text-lg">🗑️</button>

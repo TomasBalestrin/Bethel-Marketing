@@ -30,10 +30,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sites          Site[]
-  contentProfile ContentProfile?
-  contentPieces  ContentPiece[]
-  contentPlans   ContentPlan[]
+  sites           Site[]
+  contentProfiles ContentProfile[]
+  contentPieces   ContentPiece[]
+  contentPlans    ContentPlan[]
 
   @@map("users")
 }
@@ -43,6 +43,8 @@ model ContentPlan {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  profileId  String? // qual perfil/Instagram gerou este plano
+  instagram  String? // @ do perfil (snapshot para exibição no histórico)
   titulo     String  @default("Plano de conteúdo")
   quantidade Int
   // Array de itens do calendário; cada item pode conter o roteiro completo (gerado sob demanda)
@@ -57,9 +59,10 @@ model ContentPlan {
 
 model ContentProfile {
   id     String @id @default(uuid())
-  userId String @unique
+  userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  instagram      String? // @ do perfil (identifica cada Instagram do mentorado)
   negocio        String
   nicho          String
   publico        String  @db.Text // quem é o cliente ideal
@@ -75,6 +78,7 @@ model ContentProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@map("content_profiles")
 }
 

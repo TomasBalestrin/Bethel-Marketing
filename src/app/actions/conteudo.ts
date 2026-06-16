@@ -18,30 +18,52 @@ async function getDbUser() {
   )
 }
 
-// ── Perfil de conteúdo (entrada simples do mentorado) ─────────────────────────
+// ── Perfis de conteúdo (um por Instagram do mentorado) ────────────────────────
 
 export type ContentProfileInput = {
+  id?: string
+  instagram?: string
   negocio?: string
   nicho: string
   servicos?: string
-  sobre?: string // sobre o negócio + público + foco que ela quer seguir
+  sobre?: string // sobre o negócio + público + foco
 }
 
-export async function getContentProfile(): Promise<Result<ContentProfileInput | null>> {
+export type ProfileSummary = { id: string; instagram: string; negocio: string; nicho: string }
+
+export async function listContentProfiles(): Promise<Result<ProfileSummary[]>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
-    const p = await prisma.contentProfile.findUnique({ where: { userId: dbUser.id } })
-    // O gerador de roteiros é independente do criador de sites: o mentorado
-    // preenche o próprio perfil; não puxamos dados do Site.
-    if (!p) return { success: true, data: null }
+    const rows = await prisma.contentProfile.findMany({
+      where: { userId: dbUser.id },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, instagram: true, negocio: true, nicho: true },
+    })
+    return {
+      success: true,
+      data: rows.map(r => ({ id: r.id, instagram: r.instagram ?? '', negocio: r.negocio, nicho: r.nicho })),
+    }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao listar perfis' }
+  }
+}
+
+export async function getContentProfile(id: string): Promise<Result<ContentProfileInput | null>> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const p = await prisma.contentProfile.findUnique({ where: { id } })
+    if (!p || p.userId !== dbUser.id) return { success: true, data: null }
     return {
       success: true,
       data: {
+        id: p.id,
+        instagram: p.instagram ?? '',
         negocio: p.negocio ?? '',
         nicho: p.nicho,
         servicos: p.servicos ?? '',
-        sobre: p.publico ?? '', // reutiliza a coluna publico como "sobre o negócio/público/foco"
+        sobre: p.publico ?? '',
       },
     }
   } catch (e) {
@@ -49,25 +71,43 @@ export async function getContentProfile(): Promise<Result<ContentProfileInput | 
   }
 }
 
-export async function saveContentProfile(input: ContentProfileInput): Promise<Result> {
+export async function saveContentProfile(input: ContentProfileInput): Promise<Result<{ id: string }>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   if (!input.nicho?.trim()) return { success: false, error: 'Informe o nicho.' }
   const data = {
-    negocio: input.negocio?.trim() || input.nicho,
+    instagram: input.instagram?.replace('@', '').trim() || null,
+    negocio: input.negocio?.trim() || input.nicho.trim(),
     nicho: input.nicho.trim(),
     servicos: input.servicos?.trim() || null,
     publico: input.sobre?.trim() || '',
   }
   try {
-    await prisma.contentProfile.upsert({
-      where: { userId: dbUser.id },
-      create: { ...data, userId: dbUser.id },
-      update: data,
-    })
-    return { success: true, data: undefined }
+    // Atualiza se for dono; senão cria
+    if (input.id) {
+      const existing = await prisma.contentProfile.findUnique({ where: { id: input.id } })
+      if (existing && existing.userId === dbUser.id) {
+        await prisma.contentProfile.update({ where: { id: existing.id }, data })
+        return { success: true, data: { id: existing.id } }
+      }
+    }
+    const created = await prisma.contentProfile.create({ data: { ...data, userId: dbUser.id } })
+    return { success: true, data: { id: created.id } }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar perfil' }
+  }
+}
+
+export async function deleteContentProfile(id: string): Promise<Result> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const p = await prisma.contentProfile.findUnique({ where: { id } })
+    if (!p || p.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    await prisma.contentProfile.delete({ where: { id } })
+    return { success: true, data: undefined }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao excluir' }
   }
 }
 
@@ -94,12 +134,19 @@ export type PlanItem = {
   roteiro?: PlanItemRoteiro
 }
 
-export async function savePlan(quantidade: number, itens: Prisma.InputJsonValue, titulo?: string): Promise<Result<{ id: string }>> {
+export async function savePlan(args: { quantidade: number; itens: Prisma.InputJsonValue; titulo?: string; profileId?: string; instagram?: string }): Promise<Result<{ id: string }>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
     const created = await prisma.contentPlan.create({
-      data: { userId: dbUser.id, quantidade, itens, titulo: titulo || 'Plano de conteúdo' },
+      data: {
+        userId: dbUser.id,
+        quantidade: args.quantidade,
+        itens: args.itens,
+        titulo: args.titulo || 'Plano de conteúdo',
+        profileId: args.profileId || null,
+        instagram: args.instagram?.replace('@', '').trim() || null,
+      },
     })
     return { success: true, data: { id: created.id } }
   } catch (e) {
@@ -107,7 +154,7 @@ export async function savePlan(quantidade: number, itens: Prisma.InputJsonValue,
   }
 }
 
-export type PlanListItem = { id: string; titulo: string; quantidade: number; createdAt: string }
+export type PlanListItem = { id: string; titulo: string; quantidade: number; instagram: string; createdAt: string }
 
 export async function listPlans(): Promise<Result<PlanListItem[]>> {
   const dbUser = await getDbUser()
@@ -116,10 +163,10 @@ export async function listPlans(): Promise<Result<PlanListItem[]>> {
     const rows = await prisma.contentPlan.findMany({
       where: { userId: dbUser.id },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, titulo: true, quantidade: true, createdAt: true },
+      select: { id: true, titulo: true, quantidade: true, instagram: true, createdAt: true },
       take: 30,
     })
-    return { success: true, data: rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })) }
+    return { success: true, data: rows.map(r => ({ id: r.id, titulo: r.titulo, quantidade: r.quantidade, instagram: r.instagram ?? '', createdAt: r.createdAt.toISOString() })) }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao listar' }
   }
