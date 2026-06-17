@@ -124,9 +124,10 @@ async function extractLogoColor(logoUrl: string): Promise<string | null> {
 
 export async function generateSiteHTML(data: SiteData): Promise<string> {
   const paleta = getPaleta(data.corPaleta)
-  // Cor de fundo da barra do header = cor REAL da logo (extraída no servidor),
-  // com fallback para o hex da paleta ou o tom escuro.
-  let headerBg = /^#[0-9a-fA-F]{6}$/.test(data.corPaleta) ? data.corPaleta : paleta.dark
+  // Cor de fundo da barra do header = MESMO tom escuro usado no rodapé (paleta.dark),
+  // que comprovadamente casa com a logo. Se a extração da cor real da logo funcionar,
+  // usa a cor exata (ainda melhor). NUNCA usa a cor clareada (corPaleta).
+  let headerBg = paleta.dark
   if (data.logoUrl) {
     const logoColor = await extractLogoColor(data.logoUrl)
     if (logoColor) headerBg = logoColor
