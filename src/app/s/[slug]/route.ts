@@ -37,7 +37,15 @@ export async function GET(
     })
   }
 
-  const html = injectTracking(site.htmlGerado, site.metaPixelId, site.gtmId)
+  let html = injectTracking(site.htmlGerado, site.metaPixelId, site.gtmId)
+
+  // Força a barra do header a usar a cor escura da marca (var(--dark)) — a MESMA
+  // do rodapé, que casa com a logo. Aplicado no serve para corrigir também os
+  // sites já gerados, sem precisar regenerar.
+  if (html.includes('--dark') && html.includes('</head>')) {
+    const headerFix = `<style id="bethel-header-fix">header,header>div,.header-inner{background:var(--dark) !important;background-image:none !important}</style>`
+    html = html.replace('</head>', `${headerFix}</head>`)
+  }
 
   return new NextResponse(html, {
     headers: {
