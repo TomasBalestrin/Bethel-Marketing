@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFormContext } from 'react-hook-form'
 import { Loader2, Upload, X, Wand2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -101,8 +101,16 @@ export default function StepIdentidade() {
   const { register, watch, setValue, formState: { errors } } = useFormContext<FormData>()
   const [uploading, setUploading] = useState(false)
   const [extracting, setExtracting] = useState(false)
-  const [logoPalette, setLogoPalette] = useState<{ primary: string; secondary: string; light: string; dark: string } | null>(null)
+  const [logoPalette, setLogoPalette] = useState<{ hex: string; primary: string; secondary: string; light: string; dark: string } | null>(null)
   const logoUrl = watch('logoUrl')
+
+  // Ao editar um site que já tem logo, re-extrai a cor pra a opção "Cor da Logo" aparecer
+  useEffect(() => {
+    if (logoUrl && !logoPalette) {
+      extractDominantColor(logoUrl).then(hex => setLogoPalette({ hex, ...generatePaletteFromHex(hex) }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logoUrl])
   const corPaleta = watch('corPaleta')
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -118,7 +126,7 @@ export default function StepIdentidade() {
       setExtracting(true)
       const hex = await extractDominantColor(data.url)
       const palette = generatePaletteFromHex(hex)
-      setLogoPalette(palette)
+      setLogoPalette({ hex, ...palette })
       setExtracting(false)
     }
     setUploading(false)
@@ -218,10 +226,10 @@ export default function StepIdentidade() {
             <button
               key={p.id}
               type="button"
-              onClick={() => setValue('corPaleta', p.id === LOGO_PALETTE_ID ? p.primary : p.id, { shouldValidate: true })}
+              onClick={() => setValue('corPaleta', p.id === LOGO_PALETTE_ID && 'hex' in p ? String(p.hex) : p.id, { shouldValidate: true })}
               className={cn(
                 'border-2 rounded-xl p-2.5 text-center transition-all',
-                (p.id === LOGO_PALETTE_ID ? corPaleta === p.primary : corPaleta === p.id)
+                (p.id === LOGO_PALETTE_ID && 'hex' in p ? corPaleta === String(p.hex) : corPaleta === p.id)
                   ? 'border-blue-500 bg-blue-50'
                   : p.id === LOGO_PALETTE_ID
                   ? 'border-dashed border-purple-300 hover:border-purple-400 bg-purple-50'
