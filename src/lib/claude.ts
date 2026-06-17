@@ -92,10 +92,45 @@ function getPaleta(corPaleta: string) {
   return { primary: '#1E40AF', secondary: '#3B82F6', light: '#EFF6FF', dark: '#1E3A8A' }
 }
 
+// Extrai a cor de fundo real da logo (servidor) para a barra do header bater exatamente.
+// Mesmo algoritmo do extrator do formulário, mas usado em RAW (sem clarear).
+async function extractLogoColor(logoUrl: string): Promise<string | null> {
+  try {
+    const sharp = (await import('sharp')).default
+    const res = await fetch(logoUrl)
+    if (!res.ok) return null
+    const buf = Buffer.from(await res.arrayBuffer())
+    const size = 64
+    const { data } = await sharp(buf).resize(size, size, { fit: 'fill' }).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+    const colorMap: Record<string, number> = {}
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 128) continue // transparente
+      const r = Math.round(data[i] / 32) * 32
+      const g = Math.round(data[i + 1] / 32) * 32
+      const b = Math.round(data[i + 2] / 32) * 32
+      if (r > 220 && g > 220 && b > 220) continue // quase branco
+      if (r < 30 && g < 30 && b < 30) continue     // quase preto
+      const key = `${r},${g},${b}`
+      colorMap[key] = (colorMap[key] || 0) + 1
+    }
+    const top = Object.entries(colorMap).sort((a, b) => b[1] - a[1])[0]
+    if (!top) return null
+    const [r, g, b] = top[0].split(',').map(Number)
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+  } catch {
+    return null
+  }
+}
+
 export async function generateSiteHTML(data: SiteData): Promise<string> {
   const paleta = getPaleta(data.corPaleta)
-  // Cor de fundo da barra do header = cor da logo (hex extraído da logo, ou tom escuro da paleta)
-  const headerBg = /^#[0-9a-fA-F]{6}$/.test(data.corPaleta) ? data.corPaleta : paleta.dark
+  // Cor de fundo da barra do header = cor REAL da logo (extraída no servidor),
+  // com fallback para o hex da paleta ou o tom escuro.
+  let headerBg = /^#[0-9a-fA-F]{6}$/.test(data.corPaleta) ? data.corPaleta : paleta.dark
+  if (data.logoUrl) {
+    const logoColor = await extractLogoColor(data.logoUrl)
+    if (logoColor) headerBg = logoColor
+  }
 
   const services = data.servicos
     .map((s) => `• ${s.nome}${s.descricao ? ` — DESCRIÇÃO EXATA (copie verbatim): "${s.descricao}"` : ''}`)
