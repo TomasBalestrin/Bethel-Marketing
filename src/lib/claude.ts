@@ -130,6 +130,7 @@ export async function generateSiteHTML(data: SiteData): Promise<string> {
   let headerBg = paleta.dark
   if (data.logoUrl) {
     const logoColor = await extractLogoColor(data.logoUrl)
+    console.log(`[header] cor da logo extraída: ${logoColor ?? 'FALHOU (usando paleta.dark)'} | headerBg final: ${logoColor ?? headerBg}`)
     if (logoColor) headerBg = logoColor
   }
 
