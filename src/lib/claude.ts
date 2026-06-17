@@ -221,7 +221,7 @@ ESTRUTURA OBRIGATÓRIA (nesta ordem):
   </div>
 </header>
 O header deve conter EXATAMENTE os elementos acima — nenhum elemento a mais.
-ESTILO DO HEADER (obrigatório): o <header> deve ter background:${headerBg} — a MESMA cor da logo — para a logo se integrar à barra e NÃO parecer um quadrado/retângulo colado de cor diferente. Como esse fundo é colorido, os links do <nav> e o ícone do botão de menu devem ser claros e legíveis sobre ele (use branco #ffffff ou um tom bem claro). Header fixo no topo (sticky). NÃO use fundo branco no header quando há logo.
+ESTILO DO HEADER (obrigatório): o <header> deve ter EXATAMENTE background:${headerBg} — a MESMA cor da logo e a MESMA cor escura usada no rodapé. NÃO use var(--primary), NÃO use a cor primária, NÃO use gradiente e NÃO use branco no header. Use exatamente ${headerBg}. Assim a logo se integra à barra e não parece um quadrado colado. Os links do <nav> e o ícone do botão de menu devem ser claros/legíveis sobre esse fundo escuro (branco #ffffff). Header fixo no topo (sticky).
 2. <section id="hero"> — ${data.heroFotoUrl
   ? `LAYOUT COM FOTO — implemente com CSS responsivo:
   MOBILE (padrão, sem @media): section#hero { position:relative; min-height:100svh; overflow:hidden; padding:0; display:flex; align-items:flex-end }
