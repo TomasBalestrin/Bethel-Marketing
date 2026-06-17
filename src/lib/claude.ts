@@ -340,7 +340,7 @@ IMPORTANTE: Certifique-se de gerar TODAS as seções acima e fechar corretamente
   // Garante que a barra do header tenha exatamente a cor da logo (a IA às vezes
   // usa a cor primária/gradiente). Injeta um override com !important.
   if (data.logoUrl) {
-    const override = `<style id="bethel-header-bg">header{background:${headerBg} !important;background-image:none !important}</style>`
+    const override = `<style id="bethel-header-bg">header,header>div,.header-inner,.site-header,.navbar,.topbar{background:${headerBg} !important;background-image:none !important}</style>`
     html = html.includes('</head>') ? html.replace('</head>', `${override}</head>`) : `${override}${html}`
   }
 
