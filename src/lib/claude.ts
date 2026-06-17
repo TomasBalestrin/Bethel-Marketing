@@ -94,6 +94,8 @@ function getPaleta(corPaleta: string) {
 
 export async function generateSiteHTML(data: SiteData): Promise<string> {
   const paleta = getPaleta(data.corPaleta)
+  // Cor de fundo da barra do header = cor da logo (hex extraído da logo, ou tom escuro da paleta)
+  const headerBg = /^#[0-9a-fA-F]{6}$/.test(data.corPaleta) ? data.corPaleta : paleta.dark
 
   const services = data.servicos
     .map((s) => `• ${s.nome}${s.descricao ? ` — DESCRIÇÃO EXATA (copie verbatim): "${s.descricao}"` : ''}`)
@@ -182,6 +184,7 @@ ESTRUTURA OBRIGATÓRIA (nesta ordem):
   </div>
 </header>
 O header deve conter EXATAMENTE os elementos acima — nenhum elemento a mais.
+ESTILO DO HEADER (obrigatório): o <header> deve ter background:${headerBg} — a MESMA cor da logo — para a logo se integrar à barra e NÃO parecer um quadrado/retângulo colado de cor diferente. Como esse fundo é colorido, os links do <nav> e o ícone do botão de menu devem ser claros e legíveis sobre ele (use branco #ffffff ou um tom bem claro). Header fixo no topo (sticky). NÃO use fundo branco no header quando há logo.
 2. <section id="hero"> — ${data.heroFotoUrl
   ? `LAYOUT COM FOTO — implemente com CSS responsivo:
   MOBILE (padrão, sem @media): section#hero { position:relative; min-height:100svh; overflow:hidden; padding:0; display:flex; align-items:flex-end }
