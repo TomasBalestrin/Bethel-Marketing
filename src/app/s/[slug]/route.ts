@@ -65,7 +65,7 @@ export async function GET(
   const { slug } = await params
   const site = await prisma.site.findFirst({
     where: { slug, status: 'PUBLISHED' },
-    select: { htmlGerado: true, metaPixelId: true, gtmId: true, logoUrl: true },
+    select: { htmlGerado: true, metaPixelId: true, gtmId: true, logoUrl: true, registros: { select: { tipo: true, numero: true } } },
   })
 
   if (!site?.htmlGerado) {
@@ -76,6 +76,16 @@ export async function GET(
   }
 
   let html = injectTracking(site.htmlGerado, site.metaPixelId, site.gtmId)
+
+  // Remove o card de estatística com o registro profissional (CRO etc.) da seção Sobre,
+  // mantendo o registro apenas no rodapé. Só mexe em <div class="...stat...">.
+  for (const r of site.registros ?? []) {
+    const tipo = (r.tipo ?? '').trim()
+    if (!tipo) continue
+    const esc = tipo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(`<div class="[^"]*stat[^"]*">(?:(?!</div>)[\\s\\S])*?${esc}(?:(?!</div>)[\\s\\S])*?</div>`, 'i')
+    html = html.replace(re, '')
+  }
 
   // Ajustes aplicados no serve (corrigem também sites já publicados, sem regenerar):
   // 1) barra do header com a cor REAL do fundo da logo (branca, navy, etc.) +
@@ -103,7 +113,7 @@ export async function GET(
           footerBorder
       }
     }
-    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
+    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}footer img{height:72px !important;width:auto !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
     html = html.replace('</head>', `${fix}</head>`)
   }
 
