@@ -40,9 +40,9 @@ async function logoBgColor(logoUrl: string): Promise<{ hex: string; light: boole
     for (const [x, y] of pts) {
       const i = (y * W + x) * 4
       if (data[i + 3] < 128) { transparent++; continue }
-      const r = Math.round(data[i] / 16) * 16
-      const g = Math.round(data[i + 1] / 16) * 16
-      const b = Math.round(data[i + 2] / 16) * 16
+      const r = Math.min(255, Math.round(data[i] / 16) * 16)
+      const g = Math.min(255, Math.round(data[i + 1] / 16) * 16)
+      const b = Math.min(255, Math.round(data[i + 2] / 16) * 16)
       const k = `${r},${g},${b}`
       counts[k] = (counts[k] || 0) + 1
     }

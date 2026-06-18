@@ -105,9 +105,9 @@ async function extractLogoColor(logoUrl: string): Promise<string | null> {
     const colorMap: Record<string, number> = {}
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 128) continue // transparente
-      const r = Math.round(data[i] / 32) * 32
-      const g = Math.round(data[i + 1] / 32) * 32
-      const b = Math.round(data[i + 2] / 32) * 32
+      const r = Math.min(255, Math.round(data[i] / 32) * 32)
+      const g = Math.min(255, Math.round(data[i + 1] / 32) * 32)
+      const b = Math.min(255, Math.round(data[i + 2] / 32) * 32)
       if (r > 220 && g > 220 && b > 220) continue // quase branco
       if (r < 30 && g < 30 && b < 30) continue     // quase preto
       const key = `${r},${g},${b}`

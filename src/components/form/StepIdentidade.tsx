@@ -77,9 +77,9 @@ function extractDominantColor(imageUrl: string): Promise<string> {
       for (let i = 0; i < data.length; i += 4) {
         const a = data[i + 3]
         if (a < 128) continue
-        const r = Math.round(data[i] / 32) * 32
-        const g = Math.round(data[i + 1] / 32) * 32
-        const b = Math.round(data[i + 2] / 32) * 32
+        const r = Math.min(255, Math.round(data[i] / 32) * 32)
+        const g = Math.min(255, Math.round(data[i + 1] / 32) * 32)
+        const b = Math.min(255, Math.round(data[i + 2] / 32) * 32)
         if (r > 220 && g > 220 && b > 220) continue
         if (r < 30 && g < 30 && b < 30) continue
         const key = `${r},${g},${b}`
