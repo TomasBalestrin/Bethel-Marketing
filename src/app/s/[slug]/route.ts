@@ -39,12 +39,15 @@ export async function GET(
 
   let html = injectTracking(site.htmlGerado, site.metaPixelId, site.gtmId)
 
-  // Força a barra do header a usar a cor escura da marca (var(--dark)) — a MESMA
-  // do rodapé, que casa com a logo. Aplicado no serve para corrigir também os
-  // sites já gerados, sem precisar regenerar.
-  if (html.includes('--dark') && html.includes('</head>')) {
-    const headerFix = `<style id="bethel-header-fix">header,header>div,.header-inner{background:var(--dark) !important;background-image:none !important}</style>`
-    html = html.replace('</head>', `${headerFix}</head>`)
+  // Ajustes aplicados no serve para corrigir também os sites já gerados, sem regenerar:
+  // 1) barra do header com a cor escura da marca (var(--dark)), que casa com a logo;
+  // 2) cards de serviços com título e descrição centralizados.
+  if (html.includes('</head>')) {
+    const darkRule = html.includes('--dark')
+      ? 'header,header>div,.header-inner{background:var(--dark) !important;background-image:none !important}'
+      : ''
+    const fix = `<style id="bethel-fix">${darkRule}#servicos,#servicos *{text-align:center !important}</style>`
+    html = html.replace('</head>', `${fix}</head>`)
   }
 
   return new NextResponse(html, {
