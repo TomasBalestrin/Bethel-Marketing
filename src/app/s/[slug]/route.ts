@@ -113,7 +113,7 @@ export async function GET(
           footerBorder
       }
     }
-    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}footer img{height:72px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
+    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}footer img{height:72px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
     html = html.replace('</head>', `${fix}</head>`)
   }
 
