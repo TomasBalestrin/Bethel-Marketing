@@ -97,8 +97,8 @@ export async function GET(
     if (site.logoUrl) {
       const bg = await logoBgColor(site.logoUrl)
       if (bg) {
-        // Logo de fundo claro → barra BRANCA (limpa); fundo escuro → cor exata da logo
-        const barColor = bg.light ? '#ffffff' : bg.hex
+        // Barra = cor REAL do fundo da logo (combina com o entorno da logo)
+        const barColor = bg.hex
         const txt = bg.light ? '#1a1a1a' : '#ffffff'
         const headerBorder = bg.light ? 'header{border-bottom:1px solid rgba(0,0,0,0.08) !important}' : ''
         const footerBorder = bg.light ? 'footer{border-top:1px solid rgba(0,0,0,0.08) !important}' : ''
@@ -113,7 +113,7 @@ export async function GET(
           footerBorder
       }
     }
-    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}footer img{height:72px !important;width:auto !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
+    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}footer img{height:72px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
     html = html.replace('</head>', `${fix}</head>`)
   }
 
