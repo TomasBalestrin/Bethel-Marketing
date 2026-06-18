@@ -87,10 +87,14 @@ export async function GET(
     if (site.logoUrl) {
       const bg = await logoBgColor(site.logoUrl)
       if (bg) {
+        // Logo de fundo claro → barra BRANCA (limpa); fundo escuro → cor exata da logo
+        const headerColor = bg.light ? '#ffffff' : bg.hex
         const txt = bg.light ? '#1a1a1a' : '#ffffff'
+        const border = bg.light ? 'header{border-bottom:1px solid rgba(0,0,0,0.08) !important}' : ''
         headerRule =
-          `header,header>div,.header-inner{background:${bg.hex} !important;background-image:none !important}` +
-          `header a,header nav a,header .menu-btn,header button{color:${txt} !important}`
+          `header,header>div,.header-inner{background:${headerColor} !important;background-image:none !important}` +
+          `header a,header nav a,header .menu-btn,header button{color:${txt} !important}` +
+          border
       }
     }
     const fix = `<style id="bethel-fix">${headerRule}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
