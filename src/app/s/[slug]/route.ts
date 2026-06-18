@@ -97,7 +97,7 @@ export async function GET(
           border
       }
     }
-    const fix = `<style id="bethel-fix">${headerRule}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
+    const fix = `<style id="bethel-fix">${headerRule}header img{height:60px !important;width:auto !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
     html = html.replace('</head>', `${fix}</head>`)
   }
 
