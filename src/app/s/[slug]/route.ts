@@ -88,13 +88,19 @@ export async function GET(
       const bg = await logoBgColor(site.logoUrl)
       if (bg) {
         // Logo de fundo claro → barra BRANCA (limpa); fundo escuro → cor exata da logo
-        const headerColor = bg.light ? '#ffffff' : bg.hex
+        const barColor = bg.light ? '#ffffff' : bg.hex
         const txt = bg.light ? '#1a1a1a' : '#ffffff'
-        const border = bg.light ? 'header{border-bottom:1px solid rgba(0,0,0,0.08) !important}' : ''
+        const headerBorder = bg.light ? 'header{border-bottom:1px solid rgba(0,0,0,0.08) !important}' : ''
+        const footerBorder = bg.light ? 'footer{border-top:1px solid rgba(0,0,0,0.08) !important}' : ''
         headerRule =
-          `header,header>div,.header-inner{background:${headerColor} !important;background-image:none !important}` +
+          // Header: fundo = cor da logo + texto com contraste
+          `header,header .header-inner{background:${barColor} !important;background-image:none !important}` +
           `header a,header nav a,header .menu-btn,header button{color:${txt} !important}` +
-          border
+          headerBorder +
+          // Footer: mesma cor da logo + texto com contraste (logo se integra ao rodapé)
+          `footer{background:${barColor} !important;background-image:none !important}` +
+          `footer,footer a,footer p,footer span,footer h1,footer h2,footer h3,footer h4{color:${txt} !important}` +
+          footerBorder
       }
     }
     const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
