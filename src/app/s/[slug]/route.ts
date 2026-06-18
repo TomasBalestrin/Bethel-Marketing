@@ -46,7 +46,7 @@ export async function GET(
     const darkRule = html.includes('--dark')
       ? 'header,header>div,.header-inner{background:var(--dark) !important;background-image:none !important}'
       : ''
-    const fix = `<style id="bethel-fix">${darkRule}#servicos,#servicos *{text-align:center !important}</style>`
+    const fix = `<style id="bethel-fix">${darkRule}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
     html = html.replace('</head>', `${fix}</head>`)
   }
 
