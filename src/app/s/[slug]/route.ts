@@ -20,6 +20,44 @@ function injectTracking(html: string, metaPixelId?: string | null, gtmId?: strin
   return result
 }
 
+// Lê a cor de FUNDO real da logo amostrando os cantos da imagem (o fundo).
+// Retorna { hex, light } ou null se a logo for transparente/erro.
+async function logoBgColor(logoUrl: string): Promise<{ hex: string; light: boolean } | null> {
+  try {
+    const sharp = (await import('sharp')).default
+    const res = await fetch(logoUrl)
+    if (!res.ok) return null
+    const buf = Buffer.from(await res.arrayBuffer())
+    const W = 64, H = 64
+    const { data } = await sharp(buf).resize(W, H, { fit: 'fill' }).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+    // amostra cantos + meio das bordas superiores (onde costuma ser o fundo)
+    const pts: [number, number][] = [
+      [0, 0], [W - 1, 0], [0, H - 1], [W - 1, H - 1],
+      [Math.floor(W / 2), 0], [0, Math.floor(H / 2)], [W - 1, Math.floor(H / 2)],
+    ]
+    const counts: Record<string, number> = {}
+    let transparent = 0
+    for (const [x, y] of pts) {
+      const i = (y * W + x) * 4
+      if (data[i + 3] < 128) { transparent++; continue }
+      const r = Math.round(data[i] / 16) * 16
+      const g = Math.round(data[i + 1] / 16) * 16
+      const b = Math.round(data[i + 2] / 16) * 16
+      const k = `${r},${g},${b}`
+      counts[k] = (counts[k] || 0) + 1
+    }
+    if (transparent >= pts.length - 1) return null // logo transparente: não força barra
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]
+    if (!top) return null
+    const [r, g, b] = top[0].split(',').map(Number)
+    const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b
+    return { hex, light: lum > 160 }
+  } catch {
+    return null
+  }
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -27,7 +65,7 @@ export async function GET(
   const { slug } = await params
   const site = await prisma.site.findFirst({
     where: { slug, status: 'PUBLISHED' },
-    select: { htmlGerado: true, metaPixelId: true, gtmId: true },
+    select: { htmlGerado: true, metaPixelId: true, gtmId: true, logoUrl: true },
   })
 
   if (!site?.htmlGerado) {
@@ -39,14 +77,23 @@ export async function GET(
 
   let html = injectTracking(site.htmlGerado, site.metaPixelId, site.gtmId)
 
-  // Ajustes aplicados no serve para corrigir também os sites já gerados, sem regenerar:
-  // 1) barra do header com a cor escura da marca (var(--dark)), que casa com a logo;
-  // 2) cards de serviços com título e descrição centralizados.
+  // Ajustes aplicados no serve (corrigem também sites já publicados, sem regenerar):
+  // 1) barra do header com a cor REAL do fundo da logo (branca, navy, etc.) +
+  //    cor de texto do menu com contraste adequado;
+  // 2) serviços (título + descrição) centralizados;
+  // 3) botão CTA centralizado.
   if (html.includes('</head>')) {
-    const darkRule = html.includes('--dark')
-      ? 'header,header>div,.header-inner{background:var(--dark) !important;background-image:none !important}'
-      : ''
-    const fix = `<style id="bethel-fix">${darkRule}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
+    let headerRule = ''
+    if (site.logoUrl) {
+      const bg = await logoBgColor(site.logoUrl)
+      if (bg) {
+        const txt = bg.light ? '#1a1a1a' : '#ffffff'
+        headerRule =
+          `header,header>div,.header-inner{background:${bg.hex} !important;background-image:none !important}` +
+          `header a,header nav a,header .menu-btn,header button{color:${txt} !important}`
+      }
+    }
+    const fix = `<style id="bethel-fix">${headerRule}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
     html = html.replace('</head>', `${fix}</head>`)
   }
 
