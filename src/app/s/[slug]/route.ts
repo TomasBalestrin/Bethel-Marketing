@@ -98,7 +98,7 @@ export async function GET(
           `header a,header nav a,header .menu-btn,header button{color:${txt} !important}` +
           headerBorder +
           // Footer: mesma cor da logo + texto com contraste (logo se integra ao rodapé)
-          `footer{background:${barColor} !important;background-image:none !important}` +
+          `footer,footer .footer-inner{background:${barColor} !important;background-image:none !important}` +
           `footer,footer a,footer p,footer span,footer h1,footer h2,footer h3,footer h4{color:${txt} !important}` +
           footerBorder
       }
