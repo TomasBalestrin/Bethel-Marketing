@@ -213,7 +213,7 @@ ESTRUTURA OBRIGATÓRIA (nesta ordem):
 <header>
   <div class="header-inner">
     ${data.logoUrl
-      ? `<a href="#hero"><img src="${data.logoUrl}" alt="${data.nomeNegocio}" style="height:60px;width:auto;display:block"></a>`
+      ? `<a href="#hero"><img src="${data.logoUrl}" alt="${data.nomeNegocio}" style="height:72px;width:auto;display:block"></a>`
       : `<a href="#hero" class="brand-name">${data.nomeNegocio}</a>`
     }
     <nav><!-- links âncora: Serviços, Sobre, ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0 ? 'Espaço, ' : ''}Contato --></nav>
