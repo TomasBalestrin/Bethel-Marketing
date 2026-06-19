@@ -83,9 +83,11 @@ export async function GET(
     const tipo = (r.tipo ?? '').trim()
     if (!tipo) continue
     const esc = tipo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const re = new RegExp(`<div class="[^"]*stat[^"]*">(?:(?!</div>)[\\s\\S])*?${esc}(?:(?!</div>)[\\s\\S])*?</div>`, 'i')
+    const re = new RegExp(`<div class="[^"]*(?:stat|num)[^"]*">(?:(?!</div>)[\\s\\S])*?${esc}(?:(?!</div>)[\\s\\S])*?</div>`, 'i')
     html = html.replace(re, '')
   }
+  // Remove cards de estatística "filler" com 100% (ex: "100% foco no paciente")
+  html = html.replace(/<div class="[^"]*(?:stat|num)[^"]*">(?:(?!<\/div>)[\s\S])*?100\s*%(?:(?!<\/div>)[\s\S])*?<\/div>/gi, '')
 
   // Ajustes aplicados no serve (corrigem também sites já publicados, sem regenerar):
   // 1) barra do header com a cor REAL do fundo da logo (branca, navy, etc.) +
