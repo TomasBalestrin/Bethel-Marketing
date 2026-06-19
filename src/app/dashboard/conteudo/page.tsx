@@ -61,6 +61,8 @@ export default function ConteudoPage() {
   const [itens, setItens] = useState<PlanItem[]>([])
   const [expandido, setExpandido] = useState<number | null>(null)
   const [gerandoItem, setGerandoItem] = useState<number | null>(null)
+  const [gerandoTodos, setGerandoTodos] = useState(false)
+  const [progressoTodos, setProgressoTodos] = useState<{ atual: number; total: number } | null>(null)
   const [copiado, setCopiado] = useState('')
 
   const [showHistorico, setShowHistorico] = useState(false)
@@ -167,6 +169,32 @@ export default function ConteudoPage() {
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao gerar roteiro')
     } finally { setGerandoItem(null) }
+  }
+
+  async function gerarTodosRoteiros() {
+    const pendentes = itens.filter(it => !it.roteiro)
+    if (!pendentes.length || gerandoTodos) return
+    setGerandoTodos(true); setErro('')
+    let feitos = 0
+    setProgressoTodos({ atual: 0, total: pendentes.length })
+    for (const item of pendentes) {
+      try {
+        const tema = `${item.titulo}. Objetivo: ${item.objetivo}. Use como base este gancho: ${item.gancho}`
+        const res = await fetch('/api/conteudo', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile, funil: item.funil, categoria: item.categoria, formato: item.formato, servico: '', tema }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          const roteiro: PlanItemRoteiro = data.conteudo
+          setItens(prev => prev.map(it => it.ordem === item.ordem ? { ...it, roteiro } : it))
+          if (planId) savePlanItemRoteiro(planId, item.ordem, roteiro)
+        }
+      } catch { /* segue para o próximo */ }
+      feitos++
+      setProgressoTodos({ atual: feitos, total: pendentes.length })
+    }
+    setGerandoTodos(false); setProgressoTodos(null)
   }
 
   async function abrirHistorico() {
@@ -404,13 +432,26 @@ export default function ConteudoPage() {
         {/* Calendário */}
         {itens.length > 0 && !gerandoPlano && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
               <p className="font-semibold text-gray-900">{planTitulo || 'Plano de conteúdo'} <span className="text-gray-400 font-normal text-sm">• {itens.length} conteúdos</span></p>
-              <button onClick={baixarPdf}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex-shrink-0">
-                📄 Baixar PDF
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {itens.some(it => !it.roteiro) && (
+                  <button onClick={gerarTodosRoteiros} disabled={gerandoTodos}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 transition-all">
+                    {gerandoTodos && progressoTodos
+                      ? `⏳ Gerando ${progressoTodos.atual}/${progressoTodos.total}...`
+                      : `✨ Gerar todos os roteiros (${itens.filter(it => !it.roteiro).length})`}
+                  </button>
+                )}
+                <button onClick={baixarPdf} disabled={gerandoTodos}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                  📄 Baixar PDF
+                </button>
+              </div>
             </div>
+            {gerandoTodos && (
+              <p className="text-xs text-gray-400">Gerando os roteiros um a um — pode levar alguns minutos. Pode deixar essa aba aberta.</p>
+            )}
 
             {itens.map(item => {
               const fmt = FORMATO_META[item.formato] ?? { emoji: '📄', label: item.formato }
