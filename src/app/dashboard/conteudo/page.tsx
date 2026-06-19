@@ -207,6 +207,48 @@ export default function ConteudoPage() {
     copiar(txt, `r${it.ordem}`)
   }
 
+  function baixarPdf() {
+    if (!itens.length) return
+    const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const titulo = planTitulo || 'Plano de conteúdo'
+    const perfil = profile.instagram ? `@${profile.instagram}` : (profile.negocio || '')
+    const corpo = itens.map(it => {
+      const meta = `Dia ${it.dia} · ${FORMATO_META[it.formato]?.label ?? it.formato} · ${FUNIL_META[it.funil]?.label ?? it.funil} · ${CATEGORIA_META[it.categoria]?.label ?? it.categoria}`
+      let body = ''
+      const r = it.roteiro
+      if (r) {
+        body += `<p><b>Gancho:</b> ${esc(r.gancho)}</p>`
+        body += r.estrutura.map(s => `<div class="sec"><div class="secn">${esc(s.secao)}</div>${s.fala ? `<div><b>Falar:</b> ${esc(s.fala)}</div>` : ''}${s.conteudo ? `<div><b>${s.fala ? 'Texto na tela' : 'Texto'}:</b> ${esc(s.conteudo)}</div>` : ''}${s.imagem ? `<div class="img"><b>Imagem:</b> ${esc(s.imagem)}</div>` : ''}</div>`).join('')
+        body += `<p><b>CTA:</b> ${esc(r.cta)}</p>`
+        body += `<p><b>Legenda:</b><br>${esc(r.legenda).replace(/\n/g, '<br>')}</p>`
+        body += `<p class="tags">${r.hashtags.map(h => '#' + esc(h)).join(' ')}</p>`
+        if (r.dicas) body += `<p class="dicas"><b>Dicas:</b> ${esc(r.dicas)}</p>`
+      } else {
+        body += `<p><b>Gancho:</b> ${esc(it.gancho)}</p><p><b>Objetivo:</b> ${esc(it.objetivo)}</p><p class="pend">(roteiro completo ainda não gerado)</p>`
+      }
+      return `<section class="item"><div class="meta">${esc(meta)}</div><h2>${esc(it.titulo)}</h2>${body}</section>`
+    }).join('')
+    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>
+      *{box-sizing:border-box} body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#1a1a1a;margin:32px;line-height:1.5}
+      h1{font-size:22px;margin:0 0 4px} .sub{color:#666;margin:0 0 24px;font-size:13px}
+      .item{page-break-inside:avoid;border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:16px}
+      .meta{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#6366f1;font-weight:700;margin-bottom:4px}
+      .item h2{font-size:16px;margin:0 0 8px} p{margin:6px 0;font-size:13px}
+      .sec{border-left:2px solid #c7d2fe;padding-left:10px;margin:6px 0} .secn{font-weight:700;color:#4f46e5;font-size:12px}
+      .img{color:#666} .tags{color:#4f46e5} .dicas{background:#fff7ed;padding:8px;border-radius:6px}
+      .pend{color:#999;font-style:italic}
+      @media print{body{margin:12px}}
+    </style></head><body><h1>${esc(titulo)}</h1><p class="sub">${esc(perfil)} · ${itens.length} conteúdos</p>${corpo}</body></html>`
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'
+    document.body.appendChild(iframe)
+    const w = iframe.contentWindow
+    if (!w) return
+    w.document.open(); w.document.write(html); w.document.close()
+    w.onafterprint = () => { try { document.body.removeChild(iframe) } catch {} }
+    setTimeout(() => { w.focus(); w.print() }, 400)
+  }
+
   return (
     <div className="py-8 px-6">
       <div className="max-w-4xl mx-auto">
@@ -362,7 +404,13 @@ export default function ConteudoPage() {
         {/* Calendário */}
         {itens.length > 0 && !gerandoPlano && (
           <div className="space-y-3">
-            <p className="font-semibold text-gray-900">{planTitulo || 'Plano de conteúdo'} <span className="text-gray-400 font-normal text-sm">• {itens.length} conteúdos</span></p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-semibold text-gray-900">{planTitulo || 'Plano de conteúdo'} <span className="text-gray-400 font-normal text-sm">• {itens.length} conteúdos</span></p>
+              <button onClick={baixarPdf}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex-shrink-0">
+                📄 Baixar PDF
+              </button>
+            </div>
 
             {itens.map(item => {
               const fmt = FORMATO_META[item.formato] ?? { emoji: '📄', label: item.formato }
