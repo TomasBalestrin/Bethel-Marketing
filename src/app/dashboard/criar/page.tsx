@@ -38,8 +38,8 @@ export default async function CriarPage({
         corPaleta: site.corPaleta,
         logoUrl: site.logoUrl ?? undefined,
         servicos: site.servicos.length > 0
-          ? site.servicos.map((s) => ({ nome: s.nome, descricao: s.descricao ?? undefined }))
-          : [{ nome: '', descricao: undefined }],
+          ? site.servicos.map((s) => ({ nome: s.nome, descricao: s.descricao ?? undefined, imagemUrl: s.imagemUrl ?? undefined }))
+          : [{ nome: '', descricao: undefined, imagemUrl: undefined }],
         servicoDestaque: site.servicoDestaque,
         resultadoCliente: site.resultadoCliente,
         dorPrincipal: site.dorPrincipal,

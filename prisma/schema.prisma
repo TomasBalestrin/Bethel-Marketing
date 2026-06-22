@@ -328,6 +328,7 @@ model Servico {
   site      Site    @relation(fields: [siteId], references: [id], onDelete: Cascade)
   nome      String
   descricao String?
+  imagemUrl String?
   ordem     Int     @default(0)
 
   @@map("servicos")

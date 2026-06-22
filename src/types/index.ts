@@ -15,6 +15,7 @@ export const step2Schema = z.object({
   servicos: z.array(z.object({
     nome: z.string().min(2, 'Nome do serviço obrigatório'),
     descricao: z.string().optional(),
+    imagemUrl: z.string().optional(),
   })).min(1, 'Adicione ao menos um serviço'),
   servicoDestaque: z.string().min(2, 'Serviço destaque obrigatório'),
   resultadoCliente: z.string().min(10, 'Descreva o resultado para o cliente'),
