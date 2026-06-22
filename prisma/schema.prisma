@@ -30,12 +30,162 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sites           Site[]
-  contentProfiles ContentProfile[]
-  contentPieces   ContentPiece[]
-  contentPlans    ContentPlan[]
+  sites            Site[]
+  contentProfiles  ContentProfile[]
+  contentPieces    ContentPiece[]
+  contentPlans     ContentPlan[]
+  googleConnection GoogleConnection?
+  gbpLocations     GbpLocation[]
 
   @@map("users")
+}
+
+// ── Google Business Profile (Google Meu Negócio) ──────────────────────────────
+
+model GoogleConnection {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleAccountId String?
+  accessToken     String?   @db.Text // criptografado
+  refreshToken    String?   @db.Text // criptografado
+  tokenExpiry     DateTime?
+  scopes          String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("google_connections")
+}
+
+model GbpLocation {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountName     String? // resource name da conta GBP
+  locationName    String // resource name do local GBP
+  title           String?
+  primaryCategory String?
+  placeId         String?
+  address         String?
+  phone           String?
+  website         String?
+  lastSyncedAt    DateTime?
+  createdAt       DateTime  @default(now())
+
+  snapshots       GbpLocationSnapshot[]
+  metrics         GbpMetric[]
+  reviews         GbpReview[]
+  posts           GbpPost[]
+  recommendations GbpRecommendation[]
+  competitors     GbpCompetitor[]
+
+  @@index([userId])
+  @@map("gbp_locations")
+}
+
+model GbpLocationSnapshot {
+  id         String      @id @default(uuid())
+  locationId String
+  location   GbpLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  capturedAt DateTime    @default(now())
+  rawJson    Json
+
+  @@index([locationId])
+  @@map("gbp_location_snapshots")
+}
+
+model GbpMetric {
+  id         String      @id @default(uuid())
+  locationId String
+  location   GbpLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  month      String // "2026-06"
+  metricType String // impressions_search, impressions_maps, website_clicks, calls, direction_requests...
+  value      Int
+  capturedAt DateTime    @default(now())
+
+  @@unique([locationId, month, metricType])
+  @@index([locationId])
+  @@map("gbp_metrics")
+}
+
+model GbpReview {
+  id           String      @id @default(uuid())
+  locationId   String
+  location     GbpLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  gbpReviewId  String
+  reviewerName String?
+  starRating   Int?
+  comment      String?     @db.Text
+  replyText    String?     @db.Text
+  replied      Boolean     @default(false)
+  createTime   DateTime?
+  updateTime   DateTime?
+
+  @@unique([locationId, gbpReviewId])
+  @@index([locationId])
+  @@map("gbp_reviews")
+}
+
+model GbpPost {
+  id           String      @id @default(uuid())
+  locationId   String
+  location     GbpLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  gbpPostId    String?
+  summary      String?     @db.Text
+  postType     String? // standard | event | offer
+  state        String? // draft | scheduled | published
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+  mediaUrl     String?
+  createdAt    DateTime    @default(now())
+
+  @@index([locationId])
+  @@map("gbp_posts")
+}
+
+model GbpRecommendation {
+  id          String      @id @default(uuid())
+  locationId  String
+  location    GbpLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  generatedAt DateTime    @default(now())
+  category    String?
+  priority    String? // alta | media | baixa
+  title       String
+  description String?     @db.Text
+  status      String      @default("open") // open | done | dismissed
+
+  @@index([locationId])
+  @@map("gbp_recommendations")
+}
+
+model GbpCompetitor {
+  id         String                  @id @default(uuid())
+  locationId String
+  location   GbpLocation             @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  placeId    String?
+  name       String
+  category   String?
+  address    String?
+  createdAt  DateTime                @default(now())
+  snapshots  GbpCompetitorSnapshot[]
+
+  @@index([locationId])
+  @@map("gbp_competitors")
+}
+
+model GbpCompetitorSnapshot {
+  id           String        @id @default(uuid())
+  competitorId String
+  competitor   GbpCompetitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  capturedAt   DateTime      @default(now())
+  rating       Float?
+  reviewCount  Int?
+  photoCount   Int?
+  hasWebsite   Boolean?
+  hoursJson    Json?
+
+  @@index([competitorId])
+  @@map("gbp_competitor_snapshots")
 }
 
 model ContentPlan {
