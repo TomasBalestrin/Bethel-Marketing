@@ -2,7 +2,11 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { getGoogleStatus, disconnectGoogle, type GoogleStatus } from '@/app/actions/google'
+import {
+  getGoogleStatus, disconnectGoogle,
+  listAvailableLocations, connectLocation, listConnectedLocations, removeLocation,
+  type GoogleStatus, type AvailableLocation, type ConnectedLocation,
+} from '@/app/actions/google'
 
 const MODULOS = [
   { emoji: '🏢', titulo: 'Perfil', desc: 'Ver e editar nome, categorias, horários, telefone, descrição e atributos' },
@@ -27,16 +31,60 @@ function GoogleInner() {
   const [carregando, setCarregando] = useState(true)
   const [desconectando, setDesconectando] = useState(false)
 
+  const [conectados, setConectados] = useState<ConnectedLocation[]>([])
+  const [disponiveis, setDisponiveis] = useState<AvailableLocation[] | null>(null)
+  const [carregandoLocais, setCarregandoLocais] = useState(false)
+  const [conectandoLoc, setConectandoLoc] = useState<string | null>(null)
+  const [locMsg, setLocMsg] = useState('')
+
   const connected = params.get('connected') === '1'
   const erro = params.get('erro')
 
   useEffect(() => {
     (async () => {
       const res = await getGoogleStatus()
-      if (res.success) setStatus(res.data)
+      if (res.success) {
+        setStatus(res.data)
+        if (res.data.connected) {
+          const l = await listConnectedLocations()
+          if (l.success) setConectados(l.data)
+        }
+      }
       setCarregando(false)
     })()
   }, [])
+
+  async function carregarDisponiveis() {
+    setCarregandoLocais(true); setLocMsg(''); setDisponiveis(null)
+    try {
+      const res = await listAvailableLocations()
+      if (res.success) {
+        setDisponiveis(res.data)
+        if (res.data.length === 0) setLocMsg('Nenhum local encontrado nessa conta Google.')
+      } else {
+        setLocMsg(res.error)
+      }
+    } finally { setCarregandoLocais(false) }
+  }
+
+  async function conectarLocal(locationName: string) {
+    setConectandoLoc(locationName); setLocMsg('')
+    try {
+      const res = await connectLocation(locationName)
+      if (res.success) {
+        const l = await listConnectedLocations()
+        if (l.success) setConectados(l.data)
+        setDisponiveis(null)
+      } else setLocMsg(res.error)
+    } finally { setConectandoLoc(null) }
+  }
+
+  async function removerLocal(id: string) {
+    if (!confirm('Remover este perfil?')) return
+    const res = await removeLocation(id)
+    if (res.success) setConectados(prev => prev.filter(c => c.id !== id))
+    else alert(res.error)
+  }
 
   async function desconectar() {
     if (!confirm('Desconectar a conta do Google?')) return
@@ -92,13 +140,55 @@ function GoogleInner() {
           <div className="space-y-4">
             <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-900">✅ Conta conectada</p>
-                <p className="text-xs text-gray-500">{status.locationsCount} perfil(is) conectado(s)</p>
+                <p className="text-sm font-semibold text-gray-900">✅ Conta Google conectada</p>
+                <p className="text-xs text-gray-500">{conectados.length} perfil(is) conectado(s)</p>
               </div>
               <button onClick={desconectar} disabled={desconectando}
                 className="px-3 py-1.5 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all disabled:opacity-50">
                 {desconectando ? '...' : 'Desconectar'}
               </button>
+            </div>
+
+            {/* Perfis conectados */}
+            {conectados.map(loc => (
+              <div key={loc.id} className="bg-white border border-gray-200 rounded-xl p-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">🏢 {loc.title}</p>
+                  <p className="text-xs text-gray-500">{[loc.primaryCategory, loc.address].filter(Boolean).join(' • ')}</p>
+                </div>
+                <button onClick={() => removerLocal(loc.id)}
+                  className="text-gray-300 hover:text-red-500 text-sm flex-shrink-0">🗑️</button>
+              </div>
+            ))}
+
+            {/* Selecionar/adicionar perfil */}
+            <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-700">{conectados.length ? 'Adicionar outro perfil' : 'Conecte um perfil do Google'}</p>
+                <button onClick={carregarDisponiveis} disabled={carregandoLocais}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 disabled:opacity-50">
+                  {carregandoLocais ? '⏳ Buscando...' : '🔄 Buscar perfis'}
+                </button>
+              </div>
+
+              {locMsg && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">{locMsg}</p>}
+
+              {disponiveis && disponiveis.length > 0 && (
+                <div className="space-y-1.5">
+                  {disponiveis.map(d => (
+                    <div key={d.locationName} className="flex items-center justify-between gap-3 border border-gray-100 rounded-lg px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{d.title}</p>
+                        <p className="text-xs text-gray-400 truncate">{[d.primaryCategory, d.address].filter(Boolean).join(' • ')}</p>
+                      </div>
+                      <button onClick={() => conectarLocal(d.locationName)} disabled={conectandoLoc === d.locationName}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 flex-shrink-0">
+                        {conectandoLoc === d.locationName ? '⏳' : 'Conectar'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
