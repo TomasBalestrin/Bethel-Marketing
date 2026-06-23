@@ -5,8 +5,8 @@ export const step1Schema = z.object({
   segmento: z.string().min(2, 'Segmento obrigatório'),
   cidade: z.string().min(2, 'Cidade obrigatória'),
   estado: z.string().min(2, 'Estado obrigatório'),
-  endereco: z.string().min(5, 'Endereço obrigatório'),
-  cep: z.string().min(8, 'CEP obrigatório'),
+  endereco: z.string().optional().default(''),
+  cep: z.string().optional().default(''),
   corPaleta: z.string().min(1, 'Selecione uma paleta'),
   logoUrl: z.string().optional(),
 })

@@ -180,12 +180,12 @@ export default function StepIdentidade() {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label htmlFor="endereco">Endereço *</Label>
-          <Input id="endereco" {...register('endereco')} className="mt-1.5" placeholder="Rua das Flores, 123" />
+          <Label htmlFor="endereco">Endereço (opcional)</Label>
+          <Input id="endereco" {...register('endereco')} className="mt-1.5" placeholder="Deixe vazio se for home office / online" />
           {errors.endereco && <p className="text-xs text-red-500 mt-1">{errors.endereco.message}</p>}
         </div>
         <div>
-          <Label htmlFor="cep">CEP *</Label>
+          <Label htmlFor="cep">CEP (opcional)</Label>
           <Input id="cep" {...register('cep')} className="mt-1.5" placeholder="00000-000" maxLength={9} />
           {errors.cep && <p className="text-xs text-red-500 mt-1">{errors.cep.message}</p>}
         </div>

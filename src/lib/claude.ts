@@ -146,6 +146,8 @@ export async function generateSiteHTML(data: SiteData): Promise<string> {
     .map(h => h.replace('@', '').trim())
     .filter(Boolean)
 
+  const temEndereco = Boolean(data.endereco && data.endereco.trim())
+
   const whatsappNum = data.whatsapp.replace(/\D/g, '')
   const whatsappLink = `https://wa.me/55${whatsappNum}?text=${encodeURIComponent(data.whatsappMensagem)}`
 
@@ -170,7 +172,7 @@ PROIBIÇÕES ABSOLUTAS — NUNCA VIOLE ESTAS REGRAS:
 NEGÓCIO:
 - Nome: ${data.nomeNegocio}
 - Segmento: ${data.segmento}
-- Localização: ${data.endereco}, ${data.cidade} - ${data.estado}, CEP: ${data.cep}
+- Localização: ${temEndereco ? `${data.endereco}, ${data.cidade} - ${data.estado}${data.cep ? `, CEP: ${data.cep}` : ''}` : `${data.cidade} - ${data.estado} — NEGÓCIO SEM ENDEREÇO FÍSICO (home office / atende online): NÃO inclua rua, endereço nem CEP em lugar nenhum (nem no card de contato, nem no rodapé, nem no schema). Use apenas a cidade/estado.`}
 - Serviço destaque: ${data.servicoDestaque}
 - Resultado entregue ao cliente: ${data.resultadoCliente}
 
@@ -246,7 +248,7 @@ ESTILO DO HEADER (obrigatório): o <header> deve ter EXATAMENTE background:${hea
 6. ${depoimentosImagens.length > 0 ? `<section id="depoimentos"> — título e subtítulo CENTRALIZADOS, carrossel de imagens de depoimentos. Use as ${depoimentosImagens.length} URLs fornecidas como <img> com estes estilos EXATOS: display:block; margin:0 auto; width:auto; max-width:100%; max-height:480px; height:auto; object-fit:contain; border-radius:12px. O teto de altura (max-height:480px) é OBRIGATÓRIO para os prints não ficarem gigantes — a imagem reduz mantendo a proporção, sem cortar e sem espaços em branco. O carrossel deve ter um wrapper externo com position:relative; max-width:440px; margin:0 auto; padding:0 48px (para reservar espaço lateral às setas) — largura menor porque depoimentos costumam ser prints verticais. As setas prev/next devem ser position:absolute; top:50%; transform:translateY(-50%) FORA da imagem, posicionadas no padding lateral: left:0 e right:0 com width:40px; height:40px. A imagem fica dentro de um container interno sem padding, centralizada. Assim as setas ficam ao lado das fotos, nunca sobre elas. Adicione indicadores de pontos abaixo. Carrossel responsivo e touch-friendly.` : '<!-- sem depoimentos -->'}
 7. <section id="cta"> — estrutura obrigatória em duas partes dentro de um container (max-width:600px; margin:0 auto; text-align:center):
    PARTE 1 (centralizada): badge, título h2, subtítulo p, e botão CTA — todos com text-align:center e o botão com display:inline-block ou display:block; margin:0 auto
-   PARTE 2 (lista de contato): div separado com text-align:left, contendo os itens de endereço, horário e Instagram, cada item com display:flex; align-items:center; gap:12px; margin-bottom:12px. ${instagramHandles.length > 1 ? `Há ${instagramHandles.length} perfis de Instagram — mostre UM link clicável para CADA um (ex: @${instagramHandles[0]} e @${instagramHandles[1]}), cada link apontando para https://instagram.com/<perfil>.` : 'O Instagram deve ser um link clicável para https://instagram.com/<perfil>.'}
+   PARTE 2 (lista de contato): div separado com text-align:left, contendo os itens de ${temEndereco ? 'endereço, ' : ''}horário e Instagram, cada item com display:flex; align-items:center; gap:12px; margin-bottom:12px.${temEndereco ? '' : ' IMPORTANTE: NÃO inclua item de endereço/localização (o negócio não tem endereço físico).'} ${instagramHandles.length > 1 ? `Há ${instagramHandles.length} perfis de Instagram — mostre UM link clicável para CADA um (ex: @${instagramHandles[0]} e @${instagramHandles[1]}), cada link apontando para https://instagram.com/<perfil>.` : 'O Instagram deve ser um link clicável para https://instagram.com/<perfil>.'}
    Use fundo claro (cor light da paleta ou branco) com texto escuro para garantir contraste
 8. <footer> — dados de contato, horário, Instagram (se houver)${data.registros.length > 0 ? `, registros profissionais (${data.registros.map((r) => `${r.tipo} ${r.numero}`).join(', ')})` : ''}, copyright. IMPORTANTE: o footer deve ter padding-top mínimo de 48px para não ficar colado no botão da seção CTA acima
 
@@ -283,11 +285,11 @@ REQUISITOS TÉCNICOS:
     ${data.foto1Url ? `"image": "${data.foto1Url}",` : ''}
     "telephone": "+55${data.whatsapp.replace(/\D/g, '')}",
     "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "${data.endereco}",
+      "@type": "PostalAddress",${temEndereco ? `
+      "streetAddress": "${data.endereco}",` : ''}
       "addressLocality": "${data.cidade}",
-      "addressRegion": "${data.estado}",
-      "postalCode": "${data.cep}",
+      "addressRegion": "${data.estado}",${temEndereco && data.cep ? `
+      "postalCode": "${data.cep}",` : ''}
       "addressCountry": "BR"
     },
     "openingHoursSpecification": [/* converta "${data.horarioAtendimento}" para o formato schema.org */],
