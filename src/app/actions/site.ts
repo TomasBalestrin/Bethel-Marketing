@@ -37,7 +37,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
   const parsed = formSchema.safeParse(data)
   if (!parsed.success) return { success: false, error: 'Dados do formulário inválidos' }
 
-  const { depoimentos, servicos, registros, ...siteFields } = parsed.data
+  const { depoimentos, resultados, servicos, registros, ...siteFields } = parsed.data
   const dbUser =
     (await prisma.user.findFirst({ where: { OR: [{ id: user.id }, { email: user.email! }] } })) ??
     (await prisma.user.create({ data: { id: user.id, email: user.email!, name: user.user_metadata?.name || user.email! } }))
@@ -49,6 +49,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
       const existing = await prisma.site.findUnique({ where: { id: siteId } })
       if (existing) {
         await prisma.depoimento.deleteMany({ where: { siteId: existing.id } })
+        await prisma.resultado.deleteMany({ where: { siteId: existing.id } })
         await prisma.servico.deleteMany({ where: { siteId: existing.id } })
         await prisma.registroProfissional.deleteMany({ where: { siteId: existing.id } })
         await prisma.site.update({
@@ -59,6 +60,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
             htmlGerado: null,
             geracoesCount: 0,
             depoimentos: { create: depoimentos },
+            resultados: { create: resultados },
             servicos: { create: servicos.map((s, i) => ({ ...s, ordem: i })) },
             registros: { create: registros },
           },
@@ -73,6 +75,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
       const existing = await prisma.site.findFirst({ where: { userId: user.id } })
       if (existing) {
         await prisma.depoimento.deleteMany({ where: { siteId: existing.id } })
+        await prisma.resultado.deleteMany({ where: { siteId: existing.id } })
         await prisma.servico.deleteMany({ where: { siteId: existing.id } })
         await prisma.registroProfissional.deleteMany({ where: { siteId: existing.id } })
         await prisma.site.update({
@@ -83,6 +86,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
             htmlGerado: null,
             geracoesCount: 0,
             depoimentos: { create: depoimentos },
+            resultados: { create: resultados },
             servicos: { create: servicos.map((s, i) => ({ ...s, ordem: i })) },
             registros: { create: registros },
           },
@@ -98,6 +102,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
         ...siteFields,
         userId: user.id,
         depoimentos: { create: depoimentos },
+        resultados: { create: resultados },
         servicos: { create: servicos.map((s, i) => ({ ...s, ordem: i })) },
         registros: { create: registros },
       },
@@ -117,7 +122,7 @@ export async function generateSite(siteId: string): Promise<Result> {
 
   const site = await prisma.site.findUnique({
     where: { id: siteId },
-    include: { depoimentos: true, servicos: { orderBy: { ordem: 'asc' } }, registros: true },
+    include: { depoimentos: true, resultados: true, servicos: { orderBy: { ordem: 'asc' } }, registros: true },
   })
 
   if (!site) return { success: false, error: 'Site não encontrado' }
@@ -133,7 +138,7 @@ export async function generateSite(siteId: string): Promise<Result> {
   await prisma.site.update({ where: { id: siteId }, data: { status: 'GENERATING' } })
 
   try {
-    const html = await generateSiteHTML({ ...site, depoimentos: site.depoimentos, servicos: site.servicos, registros: site.registros, totalClientesLabel: site.totalClientesLabel ?? null, siteUrl: site.subdomain ?? null })
+    const html = await generateSiteHTML({ ...site, depoimentos: site.depoimentos, resultados: site.resultados, servicos: site.servicos, registros: site.registros, totalClientesLabel: site.totalClientesLabel ?? null, siteUrl: site.subdomain ?? null })
 
     await prisma.site.update({
       where: { id: siteId },

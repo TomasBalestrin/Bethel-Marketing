@@ -288,6 +288,7 @@ model Site {
   totalClientesLabel  String?
   certificados        String?
   depoimentos    Depoimento[]
+  resultados     Resultado[]
 
   // Fotos
   foto1Url            String?
@@ -365,6 +366,15 @@ model Depoimento {
   imagemUrl String
 
   @@map("depoimentos")
+}
+
+model Resultado {
+  id        String @id @default(uuid())
+  siteId    String
+  site      Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  imagemUrl String
+
+  @@map("resultados")
 }
 
 model RegistroProfissional {

@@ -25,6 +25,7 @@ type SiteData = {
   foto3Url?: string | null
   fotoProfissionalUrl?: string | null
   depoimentos: { imagemUrl: string }[]
+  resultados: { imagemUrl: string }[]
   registros: { tipo: string; numero: string }[]
   whatsapp: string
   whatsappMensagem: string
@@ -139,6 +140,7 @@ export async function generateSiteHTML(data: SiteData): Promise<string> {
     .join('\n')
 
   const depoimentosImagens = data.depoimentos.map(d => d.imagemUrl)
+  const resultadosImagens = data.resultados.map(r => r.imagemUrl)
 
   // Aceita 1 ou vários @ (ex: 2 profissionais), separados por vírgula/espaço/;
   const instagramHandles = (data.instagram ?? '')
@@ -195,6 +197,8 @@ ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0
 
 ${depoimentosImagens.length > 0 ? `DEPOIMENTOS (imagens — use as URLs exatamente):
 ${depoimentosImagens.map((url, i) => `• Depoimento ${i + 1}: ${url}`).join('\n')}` : ''}
+${resultadosImagens.length > 0 ? `RESULTADOS REAIS (imagens — use as URLs exatamente):
+${resultadosImagens.map((url, i) => `• Resultado ${i + 1}: ${url}`).join('\n')}` : ''}
 
 CONTATO:
 - WhatsApp: ${data.whatsapp} | Link: ${whatsappLink}
@@ -246,6 +250,7 @@ ESTILO DO HEADER (obrigatório): o <header> deve ter EXATAMENTE background:${hea
 4. <section id="sobre"> — título CENTRALIZADO criativo e específico ao segmento (PROIBIDO usar frases genéricas como "Atendimento humanizado", "com resultados reais" ou similares — crie um título relevante ao nicho), números destacados (${data.anosNoMercado} anos, ${data.totalClientes ? `${data.totalClientes}+ ${data.totalClientesLabel || 'clientes atendidos'}` : 'experiência'})${data.certificados ? ', certificações' : ''}${data.fotoProfissionalUrl ? `, foto do profissional em destaque com object-fit:cover; object-position:top center; border-radius:12px` : ''}. NÃO inclua registros profissionais (CRO, CRM, OAB, CREA, etc.) entre os números/cards de destaque desta seção — esses registros aparecem SOMENTE no rodapé. Use APENAS números REAIS fornecidos (anos no mercado, total de clientes, certificações) nos cards de destaque. NÃO invente estatísticas genéricas ou óbvias como "100% foco no paciente", "100% de satisfação", "5 estrelas", "atendimento humanizado" — só dados concretos e reais.
 5. ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0 ? `<section id="espaco"> — título e subtítulo CENTRALIZADOS, galeria com as fotos do negócio. LAYOUT OBRIGATÓRIO: no mobile (padrão, sem @media) as fotos devem ficar em coluna única, cada uma ocupando 100% da largura (display:flex; flex-direction:column; gap:16px). No desktop (@media min-width:768px) pode usar grid de 2 ou 3 colunas. Cada foto: width:100%; height:auto; object-fit:contain; border-radius:12px — mostre a imagem INTEIRA, sem cortar (NÃO use aspect-ratio fixo nem object-fit:cover na galeria). Use as URLs exatas fornecidas.` : '<!-- sem galeria de fotos -->'}
 6. ${depoimentosImagens.length > 0 ? `<section id="depoimentos"> — título e subtítulo CENTRALIZADOS, carrossel de imagens de depoimentos. Use as ${depoimentosImagens.length} URLs fornecidas como <img> com estes estilos EXATOS: display:block; margin:0 auto; width:auto; max-width:100%; max-height:480px; height:auto; object-fit:contain; border-radius:12px. O teto de altura (max-height:480px) é OBRIGATÓRIO para os prints não ficarem gigantes — a imagem reduz mantendo a proporção, sem cortar e sem espaços em branco. O carrossel deve ter um wrapper externo com position:relative; max-width:440px; margin:0 auto; padding:0 48px (para reservar espaço lateral às setas) — largura menor porque depoimentos costumam ser prints verticais. As setas prev/next devem ser position:absolute; top:50%; transform:translateY(-50%) FORA da imagem, posicionadas no padding lateral: left:0 e right:0 com width:40px; height:40px. A imagem fica dentro de um container interno sem padding, centralizada. Assim as setas ficam ao lado das fotos, nunca sobre elas. Adicione indicadores de pontos abaixo. Carrossel responsivo e touch-friendly.` : '<!-- sem depoimentos -->'}
+${resultadosImagens.length > 0 ? `6b. <section id="resultados"> (coloque ANTES da seção de contato #cta) — título e subtítulo CENTRALIZADOS, ex título "Resultados reais" / "Veja na prática". GALERIA com as ${resultadosImagens.length} imagens fornecidas (fotos de produtos, serviços e antes/depois). LAYOUT: no mobile (padrão) coluna única com gap:16px; no desktop (@media min-width:768px) grid de 2 ou 3 colunas com gap:20px. Cada imagem: width:100%; height:auto; object-fit:contain; background:#f7f7f7; border-radius:12px; display:block — mostre a imagem INTEIRA, SEM cortar. Use as URLs EXATAS fornecidas.` : '<!-- sem resultados -->'}
 7. <section id="cta"> — estrutura obrigatória em duas partes dentro de um container (max-width:600px; margin:0 auto; text-align:center):
    PARTE 1 (centralizada): badge, título h2, subtítulo p, e botão CTA — todos com text-align:center e o botão com display:inline-block ou display:block; margin:0 auto
    PARTE 2 (lista de contato): div separado com text-align:left, contendo os itens de ${temEndereco ? 'endereço, ' : ''}horário e Instagram, cada item com display:flex; align-items:center; gap:12px; margin-bottom:12px.${temEndereco ? '' : ' IMPORTANTE: NÃO inclua item de endereço/localização (o negócio não tem endereço físico).'} ${instagramHandles.length > 1 ? `Há ${instagramHandles.length} perfis de Instagram — mostre UM link clicável para CADA um (ex: @${instagramHandles[0]} e @${instagramHandles[1]}), cada link apontando para https://instagram.com/<perfil>.` : 'O Instagram deve ser um link clicável para https://instagram.com/<perfil>.'}

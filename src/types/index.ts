@@ -41,6 +41,13 @@ export const step4Schema = z.object({
       })
     )
     .default([]),
+  resultados: z
+    .array(
+      z.object({
+        imagemUrl: z.string().min(1, 'Imagem obrigatória'),
+      })
+    )
+    .default([]),
 })
 
 export const step5Schema = z.object({

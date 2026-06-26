@@ -107,9 +107,50 @@ function DepoimentoUpload({ index, onRemove }: { index: number; onRemove: () => 
   )
 }
 
+function ResultadoUpload({ index, onRemove }: { index: number; onRemove: () => void }) {
+  const { watch, setValue } = useFormContext<FormData>()
+  const [uploading, setUploading] = useState(false)
+  const url = watch(`resultados.${index}.imagemUrl`)
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const uploaded = await uploadFoto(file)
+    if (uploaded) setValue(`resultados.${index}.imagemUrl`, uploaded)
+    setUploading(false)
+  }
+
+  if (url) {
+    return (
+      <div className="relative group rounded-lg overflow-hidden border border-gray-200 aspect-square bg-gray-50">
+        <img src={url} alt={`Resultado ${index + 1}`} className="w-full h-full object-cover" />
+        <button type="button" onClick={onRemove}
+          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <label className="flex flex-col items-center justify-center gap-1.5 cursor-pointer border-2 border-dashed border-gray-200 rounded-lg aspect-square bg-gray-50 hover:bg-gray-100 transition-colors">
+      {uploading
+        ? <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+        : <ImageIcon className="w-5 h-5 text-gray-300" />
+      }
+      <span className="text-xs text-gray-400 text-center px-1 leading-tight">
+        {uploading ? 'Enviando...' : `Foto ${index + 1}`}
+      </span>
+      <input type="file" accept="image/*" className="hidden" onChange={handleChange} disabled={uploading} />
+    </label>
+  )
+}
+
 export default function StepCredibilidade() {
   const { register, control, watch, setValue, formState: { errors } } = useFormContext<FormData>()
   const { fields, append, remove } = useFieldArray({ control, name: 'depoimentos' })
+  const { fields: resFields, append: resAppend, remove: resRemove } = useFieldArray({ control, name: 'resultados' })
 
   const foto1Url = watch('foto1Url')
   const foto2Url = watch('foto2Url')
@@ -226,6 +267,41 @@ export default function StepCredibilidade() {
           {fields.length === 0 && (
             <div className="col-span-3 text-xs text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
               Clique em &quot;Adicionar&quot; para incluir depoimentos
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Resultados reais */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <Label>Resultados reais (até 5)</Label>
+          {resFields.length < 5 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => resAppend({ imagemUrl: '' })}
+              className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Adicionar
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mb-3">Fotos de produtos, serviços ou antes e depois. Serão exibidas em uma galeria no site.</p>
+
+        <div className="grid grid-cols-3 gap-2">
+          {resFields.map((field, index) => (
+            <ResultadoUpload
+              key={field.id}
+              index={index}
+              onRemove={() => resRemove(index)}
+            />
+          ))}
+          {resFields.length === 0 && (
+            <div className="col-span-3 text-xs text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
+              Clique em &quot;Adicionar&quot; para incluir resultados (produtos, serviços, antes/depois)
             </div>
           )}
         </div>
