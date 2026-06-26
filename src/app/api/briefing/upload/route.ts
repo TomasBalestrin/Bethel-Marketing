@@ -11,7 +11,12 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const formData = await request.formData()
+  let formData: FormData
+  try {
+    formData = await request.formData()
+  } catch {
+    return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 })
+  }
   const file = formData.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 400 })
   if (!file.type.startsWith('image/')) return NextResponse.json({ error: 'Envie apenas imagens' }, { status: 400 })
