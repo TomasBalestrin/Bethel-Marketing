@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, LogOut, ShieldCheck, Instagram, Radar, Sparkles, MapPin } from 'lucide-react'
+import { LayoutDashboard, LogOut, ShieldCheck, Instagram, Radar, Sparkles, MapPin, ClipboardList } from 'lucide-react'
 import { signOut } from '@/app/actions/auth'
 import { UserAvatar } from './UserAvatar'
 import { cn } from '@/lib/utils'
@@ -100,6 +100,21 @@ export function Sidebar({ userName, userEmail, isAdmin }: Props) {
           >
             <ShieldCheck className="w-4 h-4" />
             Admin
+          </Link>
+        )}
+
+        {isAdmin && (
+          <Link
+            href="/admin/briefings"
+            className={cn(
+              'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+              pathname.startsWith('/admin/briefings')
+                ? 'bg-blue-50 text-blue-700 font-medium'
+                : 'text-gray-600 hover:bg-gray-100'
+            )}
+          >
+            <ClipboardList className="w-4 h-4" />
+            Briefings
           </Link>
         )}
       </nav>

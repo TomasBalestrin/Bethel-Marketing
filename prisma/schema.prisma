@@ -322,6 +322,30 @@ model Site {
   @@map("sites")
 }
 
+// Briefing enviado pelo mentorado (formulário público) para eu criar o site
+model Briefing {
+  id                String   @id @default(uuid())
+  nomeEmpresa       String
+  email             String?
+  whatsapp          String
+  endereco          String?
+  instagram         String?
+  horario           String?
+  servicos          String?  @db.Text
+  servicoCarroChefe String?
+  anosMercado       String?
+  clientesAtendidos String?
+  logoUrl           String?
+  fotosEmpresa      String[]
+  fotosDepoimento   String[]
+  fotosAntesDepois  String[]
+  observacoes       String?  @db.Text
+  status            String   @default("novo") // novo | em_andamento | concluido
+  createdAt         DateTime @default(now())
+
+  @@map("briefings")
+}
+
 model Servico {
   id        String  @id @default(uuid())
   siteId    String
