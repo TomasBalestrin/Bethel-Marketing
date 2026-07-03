@@ -18,6 +18,15 @@ async function getAuthUser() {
   return user
 }
 
+// Prisma ignora campos `undefined` no update (não altera a coluna). Para que
+// remover uma foto/campo opcional realmente limpe o valor salvo, convertemos
+// undefined -> null (todas as colunas opcionais do Site são anuláveis).
+function nullifyUndefined<T extends Record<string, unknown>>(obj: T): T {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k, v === undefined ? null : v])
+  ) as T
+}
+
 async function ensureUniqueSlug(base: string, excludeId?: string): Promise<string> {
   let slug = base
   let count = 0
@@ -55,7 +64,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
         await prisma.site.update({
           where: { id: existing.id },
           data: {
-            ...siteFields,
+            ...nullifyUndefined(siteFields),
             status: 'DRAFT',
             htmlGerado: null,
             geracoesCount: 0,
@@ -81,7 +90,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
         await prisma.site.update({
           where: { id: existing.id },
           data: {
-            ...siteFields,
+            ...nullifyUndefined(siteFields),
             status: 'DRAFT',
             htmlGerado: null,
             geracoesCount: 0,
@@ -99,7 +108,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
     // Admin without siteId, or new regular user: create
     const site = await prisma.site.create({
       data: {
-        ...siteFields,
+        ...nullifyUndefined(siteFields),
         userId: user.id,
         depoimentos: { create: depoimentos },
         resultados: { create: resultados },
