@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useFormContext, useFieldArray } from 'react-hook-form'
-import { Plus, Trash2, Upload, Loader2, X, ImageIcon, User, Video } from 'lucide-react'
+import { Plus, Trash2, Upload, Loader2, X, ImageIcon, User, Video, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -179,7 +179,7 @@ function ResultadoUpload({ index, onRemove }: { index: number; onRemove: () => v
 
 export default function StepCredibilidade() {
   const { register, control, watch, setValue, formState: { errors } } = useFormContext<FormData>()
-  const { fields, append, remove } = useFieldArray({ control, name: 'depoimentos' })
+  const { fields, append, remove, move } = useFieldArray({ control, name: 'depoimentos' })
   const { fields: resFields, append: resAppend, remove: resRemove } = useFieldArray({ control, name: 'resultados' })
 
   const foto1Url = watch('foto1Url')
@@ -300,11 +300,32 @@ export default function StepCredibilidade() {
 
         <div className="grid grid-cols-3 gap-2">
           {fields.map((field, index) => (
-            <DepoimentoItem
-              key={field.id}
-              index={index}
-              onRemove={() => remove(index)}
-            />
+            <div key={field.id} className="flex flex-col gap-1">
+              <DepoimentoItem index={index} onRemove={() => remove(index)} />
+              {fields.length > 1 && (
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => move(index, index - 1)}
+                    disabled={index === 0}
+                    aria-label="Mover para trás"
+                    className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-[10px] text-gray-400">{index + 1}º</span>
+                  <button
+                    type="button"
+                    onClick={() => move(index, index + 1)}
+                    disabled={index === fields.length - 1}
+                    aria-label="Mover para frente"
+                    className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
           {fields.length === 0 && (
             <div className="col-span-3 text-xs text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
