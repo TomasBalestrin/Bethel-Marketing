@@ -34,23 +34,20 @@ export const step4Schema = z.object({
   foto2Url: z.string().optional(),
   foto3Url: z.string().optional(),
   fotoProfissionalUrl: z.string().optional(),
+  // Itens vazios (slot adicionado mas não preenchido) são tolerados aqui e
+  // descartados no servidor (saveSite), para não travar o salvamento.
   depoimentos: z
     .array(
-      z
-        .object({
-          imagemUrl: z.string().optional().default(''),
-          videoUrl: z.string().optional(),
-        })
-        .refine(
-          (d) => (d.imagemUrl?.length ?? 0) > 0 || (d.videoUrl?.length ?? 0) > 0,
-          { message: 'Adicione um print ou um link de vídeo do Instagram' }
-        )
+      z.object({
+        imagemUrl: z.string().optional().default(''),
+        videoUrl: z.string().optional(),
+      })
     )
     .default([]),
   resultados: z
     .array(
       z.object({
-        imagemUrl: z.string().min(1, 'Imagem obrigatória'),
+        imagemUrl: z.string().optional().default(''),
       })
     )
     .default([]),

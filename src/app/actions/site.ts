@@ -46,7 +46,12 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
   const parsed = formSchema.safeParse(data)
   if (!parsed.success) return { success: false, error: 'Dados do formulário inválidos' }
 
-  const { depoimentos, resultados, servicos, registros, ...siteFields } = parsed.data
+  const { depoimentos: depoimentosRaw, resultados: resultadosRaw, servicos, registros, ...siteFields } = parsed.data
+  // Descarta slots vazios (adicionados mas não preenchidos)
+  const depoimentos = depoimentosRaw.filter(
+    (d) => (d.imagemUrl?.trim() || '') !== '' || (d.videoUrl?.trim() || '') !== ''
+  )
+  const resultados = resultadosRaw.filter((r) => (r.imagemUrl?.trim() || '') !== '')
   const dbUser =
     (await prisma.user.findFirst({ where: { OR: [{ id: user.id }, { email: user.email! }] } })) ??
     (await prisma.user.create({ data: { id: user.id, email: user.email!, name: user.user_metadata?.name || user.email! } }))

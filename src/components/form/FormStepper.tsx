@@ -25,6 +25,17 @@ const STEPS = [
   { label: 'Contato', component: StepContato },
 ]
 
+// Mapa campo -> passo (1-based, na ordem de STEPS) para pular ao erro no submit
+const FIELD_STEP: Record<string, number> = {
+  nomeNegocio: 1, segmento: 1, cidade: 1, estado: 1, endereco: 1, cep: 1, corPaleta: 1, logoUrl: 1,
+  servicos: 2, servicoDestaque: 2, resultadoCliente: 2,
+  dorPrincipal: 3,
+  anosNoMercado: 4, totalClientes: 4, totalClientesLabel: 4, certificados: 4,
+  foto1Url: 4, foto2Url: 4, foto3Url: 4, fotoProfissionalUrl: 4, depoimentos: 4, resultados: 4,
+  heroFotoUrl: 5, headline: 5, subheadline: 5, ctaTexto: 5,
+  whatsapp: 6, whatsappMensagem: 6, instagram: 6, horarioAtendimento: 6, registros: 6,
+}
+
 export function FormStepper({ initialData, siteId }: { initialData: Partial<FormData> | null; siteId?: string }) {
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
@@ -43,16 +54,27 @@ export function FormStepper({ initialData, siteId }: { initialData: Partial<Form
 
   async function handleSubmit(data: FormData) {
     setSaving(true)
-    const result = await saveSite(data, siteId)
-    setSaving(false)
-
-    if (!result.success) {
-      toast.error(result.error)
-      return
+    try {
+      const result = await saveSite(data, siteId)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+      toast.success('Dados salvos! Agora gere o site.')
+      router.push(`/dashboard/preview?siteId=${result.data.id}`)
+    } catch (e) {
+      console.error('handleSubmit error:', e)
+      toast.error('Não foi possível salvar. Verifique a conexão e tente de novo.')
+    } finally {
+      setSaving(false)
     }
+  }
 
-    toast.success('Dados salvos! Agora gere o site.')
-    router.push(`/dashboard/preview?siteId=${result.data.id}`)
+  function onInvalid(errors: Record<string, unknown>) {
+    const firstField = Object.keys(errors)[0]
+    const targetStep = firstField ? FIELD_STEP[firstField] : undefined
+    if (targetStep) setStep(targetStep)
+    toast.error('Revise os campos destacados antes de salvar.')
   }
 
   const CurrentStep = STEPS[step - 1].component
@@ -127,7 +149,7 @@ export function FormStepper({ initialData, siteId }: { initialData: Partial<Form
                 <ChevronRight />
               </Button>
             ) : (
-              <Button type="button" onClick={() => methods.handleSubmit(handleSubmit)()} disabled={saving}>
+              <Button type="button" onClick={() => methods.handleSubmit(handleSubmit, onInvalid)()} disabled={saving}>
                 {saving && <Loader2 className="animate-spin" />}
                 {saving ? 'Salvando...' : 'Salvar informações'}
               </Button>
