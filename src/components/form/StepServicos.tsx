@@ -55,7 +55,7 @@ export default function StepServicos() {
                   {imagem ? (
                     <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 group">
                       <img src={imagem} alt="" className="w-full h-full object-cover" />
-                      <button type="button" onClick={() => setValue(`servicos.${index}.imagemUrl`, undefined)}
+                      <button type="button" onClick={() => setValue(`servicos.${index}.imagemUrl`, '')}
                         className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                         <X className="w-4 h-4" />
                       </button>

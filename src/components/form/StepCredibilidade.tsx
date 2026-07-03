@@ -44,7 +44,7 @@ function FotoUpload({
         <img src={value} alt={label} className="w-full h-full object-cover" />
         <button
           type="button"
-          onClick={() => onChange(undefined)}
+          onClick={() => onChange('')}
           className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <X className="w-3.5 h-3.5" />

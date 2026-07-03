@@ -205,7 +205,7 @@ export default function StepIdentidade() {
                   </span>
                 ) : 'Logo carregado'}
               </span>
-              <button type="button" onClick={() => { setValue('logoUrl', undefined); setLogoPalette(null) }} className="text-gray-400 hover:text-red-500">
+              <button type="button" onClick={() => { setValue('logoUrl', ''); setLogoPalette(null) }} className="text-gray-400 hover:text-red-500">
                 <X className="w-4 h-4" />
               </button>
             </div>
