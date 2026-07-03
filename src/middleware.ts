@@ -1,6 +1,12 @@
 import { createServerClient, type SetAllCookies } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Subdomínios de <appDomain> que redirecionam para um site externo já hospedado
+// em outro lugar (ex: HostGator). Chave = subdomínio, valor = URL de destino.
+const EXTERNAL_REDIRECTS: Record<string, string> = {
+  itils: 'https://itils.com.br',
+}
+
 export async function middleware(request: NextRequest) {
   // Serve client sites via subdomain (e.g. clinic.bethelapps.com)
   const hostname = request.headers.get('host') ?? ''
@@ -10,6 +16,13 @@ export async function middleware(request: NextRequest) {
   if (appDomain && hostname.endsWith(`.${appDomain}`)) {
     const slug = hostname.slice(0, hostname.length - appDomain.length - 1)
     if (slug && slug !== 'www') {
+      const external = EXTERNAL_REDIRECTS[slug]
+      if (external) {
+        // 307 (temporário) de propósito: se um dia o site migrar para o Bethel,
+        // o navegador não fica com o redirect cacheado permanentemente.
+        const target = new URL(request.nextUrl.pathname + request.nextUrl.search, external)
+        return NextResponse.redirect(target, 307)
+      }
       return NextResponse.rewrite(new URL(`/s/${slug}`, request.url))
     }
   }
