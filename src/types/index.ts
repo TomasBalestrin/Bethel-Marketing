@@ -36,9 +36,15 @@ export const step4Schema = z.object({
   fotoProfissionalUrl: z.string().optional(),
   depoimentos: z
     .array(
-      z.object({
-        imagemUrl: z.string().min(1, 'Imagem obrigatória'),
-      })
+      z
+        .object({
+          imagemUrl: z.string().optional().default(''),
+          videoUrl: z.string().optional(),
+        })
+        .refine(
+          (d) => (d.imagemUrl?.length ?? 0) > 0 || (d.videoUrl?.length ?? 0) > 0,
+          { message: 'Adicione um print ou um link de vídeo do Instagram' }
+        )
     )
     .default([]),
   resultados: z

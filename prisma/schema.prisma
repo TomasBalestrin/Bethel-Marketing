@@ -362,8 +362,9 @@ model Servico {
 model Depoimento {
   id        String @id @default(uuid())
   siteId    String
-  site      Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  imagemUrl String
+  site      Site    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  imagemUrl String  @default("")
+  videoUrl  String?
 
   @@map("depoimentos")
 }

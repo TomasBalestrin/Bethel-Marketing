@@ -24,7 +24,7 @@ type SiteData = {
   foto2Url?: string | null
   foto3Url?: string | null
   fotoProfissionalUrl?: string | null
-  depoimentos: { imagemUrl: string }[]
+  depoimentos: { imagemUrl: string; videoUrl?: string | null }[]
   resultados: { imagemUrl: string }[]
   registros: { tipo: string; numero: string }[]
   whatsapp: string
@@ -139,7 +139,21 @@ export async function generateSiteHTML(data: SiteData): Promise<string> {
     .map((s) => `• ${s.nome}${s.descricao ? ` — DESCRIÇÃO EXATA (copie verbatim): "${s.descricao}"` : ''}${s.imagemUrl ? ` [IMAGEM DO SERVIÇO (use como <img src> no card): ${s.imagemUrl}]` : ' [SEM IMAGEM]'}`)
     .join('\n')
 
-  const depoimentosImagens = data.depoimentos.map(d => d.imagemUrl)
+  // Depoimentos podem ser prints (imagem) ou vídeos do Instagram (embed via iframe)
+  const instagramEmbedUrl = (raw: string): string | null => {
+    const m = raw.match(/instagram\.com\/(?:[^/?#]+\/)?(reel|reels|p|tv)\/([A-Za-z0-9_-]+)/i)
+    if (!m) return null
+    const tipo = m[1].toLowerCase() === 'reels' ? 'reel' : m[1].toLowerCase()
+    return `https://www.instagram.com/${tipo}/${m[2]}/embed`
+  }
+  const depoimentosItens = data.depoimentos
+    .map(d => {
+      const embed = d.videoUrl && d.videoUrl.trim() ? instagramEmbedUrl(d.videoUrl.trim()) : null
+      if (embed) return { tipo: 'video' as const, src: embed }
+      if (d.imagemUrl && d.imagemUrl.trim()) return { tipo: 'imagem' as const, src: d.imagemUrl }
+      return null
+    })
+    .filter((x): x is { tipo: 'video' | 'imagem'; src: string } => x !== null)
   const resultadosImagens = data.resultados.map(r => r.imagemUrl)
 
   // Aceita 1 ou vários @ (ex: 2 profissionais), separados por vírgula/espaço/;
@@ -195,8 +209,10 @@ ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0
   ? [data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).map((url, i) => `- Foto ${i + 1}: ${url}`).join('\n')
   : '- Nenhuma foto fornecida'}
 
-${depoimentosImagens.length > 0 ? `DEPOIMENTOS (imagens — use as URLs exatamente):
-${depoimentosImagens.map((url, i) => `• Depoimento ${i + 1}: ${url}`).join('\n')}` : ''}
+${depoimentosItens.length > 0 ? `DEPOIMENTOS (${depoimentosItens.length} itens na ordem — cada um é IMAGEM ou VÍDEO DO INSTAGRAM, respeite o tipo):
+${depoimentosItens.map((it, i) => it.tipo === 'video'
+  ? `• Depoimento ${i + 1}: VÍDEO DO INSTAGRAM — incorpore com <iframe src="${it.src}"> (NÃO use <img>)`
+  : `• Depoimento ${i + 1}: IMAGEM (print) — use como <img src="${it.src}">`).join('\n')}` : ''}
 ${resultadosImagens.length > 0 ? `RESULTADOS REAIS (imagens — use as URLs exatamente):
 ${resultadosImagens.map((url, i) => `• Resultado ${i + 1}: ${url}`).join('\n')}` : ''}
 
@@ -249,7 +265,10 @@ ESTILO DO HEADER (obrigatório): o <header> deve ter EXATAMENTE background:${hea
 3. <section id="servicos"> — título e subtítulo da seção CENTRALIZADOS (text-align:center), cards dos serviços com título e descrição. NÃO use ícones nem emojis nos cards. FOTO POR SERVIÇO: quando o serviço tiver uma URL de imagem fornecida ([IMAGEM DO SERVIÇO: ...]), exiba essa foto no TOPO do card como <img> com width:100%; height:180px; object-fit:contain; background:#f7f7f7; padding:8px; border-radius:8px; margin-bottom:12px — use object-fit:CONTAIN (NÃO cover) para mostrar o produto INTEIRO, sem cortar. Quando o serviço estiver marcado [SEM IMAGEM], renderize o card NORMALMENTE só com título e descrição, SEM espaço reservado, SEM placeholder e SEM quebrar o layout — cada card é independente (uns podem ter foto e outros não, e o grid deve ficar alinhado mesmo assim). TODO o conteúdo de texto do card CENTRALIZADO (title e descrição). OBRIGATÓRIO: quando um serviço tiver descrição fornecida, copie o texto EXATAMENTE como está — proibido parafrasear, resumir, reescrever ou alterar a descrição.
 4. <section id="sobre"> — título CENTRALIZADO criativo e específico ao segmento (PROIBIDO usar frases genéricas como "Atendimento humanizado", "com resultados reais" ou similares — crie um título relevante ao nicho), números destacados (${data.anosNoMercado} anos, ${data.totalClientes ? `${data.totalClientes}+ ${data.totalClientesLabel || 'clientes atendidos'}` : 'experiência'})${data.certificados ? ', certificações' : ''}${data.fotoProfissionalUrl ? `, foto do profissional em destaque com object-fit:cover; object-position:top center; border-radius:12px` : ''}. NÃO inclua registros profissionais (CRO, CRM, OAB, CREA, etc.) entre os números/cards de destaque desta seção — esses registros aparecem SOMENTE no rodapé. Use APENAS números REAIS fornecidos (anos no mercado, total de clientes, certificações) nos cards de destaque. NÃO invente estatísticas genéricas ou óbvias como "100% foco no paciente", "100% de satisfação", "5 estrelas", "atendimento humanizado" — só dados concretos e reais.
 5. ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0 ? `<section id="espaco"> — título e subtítulo CENTRALIZADOS, galeria com as fotos do negócio. LAYOUT OBRIGATÓRIO: no mobile (padrão, sem @media) as fotos devem ficar em coluna única, cada uma ocupando 100% da largura (display:flex; flex-direction:column; gap:16px). No desktop (@media min-width:768px) pode usar grid de 2 ou 3 colunas. Cada foto: width:100%; height:auto; object-fit:contain; border-radius:12px — mostre a imagem INTEIRA, sem cortar (NÃO use aspect-ratio fixo nem object-fit:cover na galeria). Use as URLs exatas fornecidas.` : '<!-- sem galeria de fotos -->'}
-6. ${depoimentosImagens.length > 0 ? `<section id="depoimentos"> — título e subtítulo CENTRALIZADOS, carrossel de imagens de depoimentos. Use as ${depoimentosImagens.length} URLs fornecidas como <img> com estes estilos EXATOS: display:block; margin:0 auto; width:auto; max-width:100%; max-height:480px; height:auto; object-fit:contain; border-radius:12px. O teto de altura (max-height:480px) é OBRIGATÓRIO para os prints não ficarem gigantes — a imagem reduz mantendo a proporção, sem cortar e sem espaços em branco. O carrossel deve ter um wrapper externo com position:relative; max-width:440px; margin:0 auto; padding:0 48px (para reservar espaço lateral às setas) — largura menor porque depoimentos costumam ser prints verticais. As setas prev/next devem ser position:absolute; top:50%; transform:translateY(-50%) FORA da imagem, posicionadas no padding lateral: left:0 e right:0 com width:40px; height:40px. A imagem fica dentro de um container interno sem padding, centralizada. Assim as setas ficam ao lado das fotos, nunca sobre elas. Adicione indicadores de pontos abaixo. Carrossel responsivo e touch-friendly.` : '<!-- sem depoimentos -->'}
+6. ${depoimentosItens.length > 0 ? `<section id="depoimentos"> — título e subtítulo CENTRALIZADOS, carrossel com os ${depoimentosItens.length} depoimentos fornecidos (podem ser IMAGENS/prints e/ou VÍDEOS do Instagram, misturados na MESMA ordem em que aparecem na lista DEPOIMENTOS). Cada slide contém UM item:
+  - Se o item for IMAGEM (print): <img> com estes estilos EXATOS: display:block; margin:0 auto; width:auto; max-width:100%; max-height:480px; height:auto; object-fit:contain; border-radius:12px. O teto de altura (max-height:480px) é OBRIGATÓRIO para os prints não ficarem gigantes.
+  - Se o item for VÍDEO DO INSTAGRAM: use um <iframe> com a URL de embed fornecida, com estes estilos EXATOS: display:block; margin:0 auto; width:100%; max-width:400px; height:580px; border:0; border-radius:12px; background:#fff; e os atributos scrolling="no" allowtransparency="true" allowfullscreen. NUNCA use <img> para vídeo. O vídeo do Instagram fica incorporado e o visitante dá play ali mesmo.
+  O carrossel deve ter um wrapper externo com position:relative; max-width:440px; margin:0 auto; padding:0 48px (para reservar espaço lateral às setas) — largura menor porque depoimentos costumam ser verticais. As setas prev/next devem ser position:absolute; top:50%; transform:translateY(-50%) FORA do conteúdo, posicionadas no padding lateral: left:0 e right:0 com width:40px; height:40px. O item (img ou iframe) fica dentro de um container interno sem padding, centralizado. Assim as setas ficam ao lado, nunca sobre o conteúdo. Adicione indicadores de pontos abaixo. Carrossel responsivo e touch-friendly.` : '<!-- sem depoimentos -->'}
 ${resultadosImagens.length > 0 ? `6b. <section id="resultados"> (coloque ANTES da seção de contato #cta) — título e subtítulo CENTRALIZADOS, ex título "Resultados reais" / "Veja na prática". GALERIA com as ${resultadosImagens.length} imagens fornecidas (fotos de produtos, serviços e antes/depois). LAYOUT: no mobile (padrão) coluna única com gap:16px; no desktop (@media min-width:768px) grid de 2 ou 3 colunas com gap:20px. Cada imagem: width:100%; height:auto; object-fit:contain; background:#f7f7f7; border-radius:12px; display:block — mostre a imagem INTEIRA, SEM cortar. Use as URLs EXATAS fornecidas.` : '<!-- sem resultados -->'}
 7. <section id="cta"> — estrutura obrigatória em duas partes dentro de um container (max-width:600px; margin:0 auto; text-align:center):
    PARTE 1 (centralizada): badge, título h2, subtítulo p, e botão CTA — todos com text-align:center e o botão com display:inline-block ou display:block; margin:0 auto

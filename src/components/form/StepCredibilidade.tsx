@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useFormContext, useFieldArray } from 'react-hook-form'
-import { Plus, Trash2, Upload, Loader2, X, ImageIcon, User } from 'lucide-react'
+import { Plus, Trash2, Upload, Loader2, X, ImageIcon, User, Video } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -67,7 +67,7 @@ function FotoUpload({
   )
 }
 
-function DepoimentoUpload({ index, onRemove }: { index: number; onRemove: () => void }) {
+function DepoimentoImagem({ index, onRemove }: { index: number; onRemove: () => void }) {
   const { watch, setValue } = useFormContext<FormData>()
   const [uploading, setUploading] = useState(false)
   const url = watch(`depoimentos.${index}.imagemUrl`)
@@ -100,11 +100,41 @@ function DepoimentoUpload({ index, onRemove }: { index: number; onRemove: () => 
         : <ImageIcon className="w-5 h-5 text-gray-300" />
       }
       <span className="text-xs text-gray-400 text-center px-1 leading-tight">
-        {uploading ? 'Enviando...' : `Print ${index + 1}`}
+        {uploading ? 'Enviando...' : 'Print'}
       </span>
       <input type="file" accept="image/*" className="hidden" onChange={handleChange} disabled={uploading} />
     </label>
   )
+}
+
+function DepoimentoVideo({ index, onRemove }: { index: number; onRemove: () => void }) {
+  const { register } = useFormContext<FormData>()
+  return (
+    <div className="relative rounded-lg border border-gray-200 bg-gray-50 p-2.5 flex flex-col justify-center gap-1.5 aspect-square">
+      <button type="button" onClick={onRemove}
+        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5">
+        <X className="w-3.5 h-3.5" />
+      </button>
+      <div className="flex items-center gap-1.5 text-gray-500">
+        <Video className="w-4 h-4" />
+        <span className="text-xs font-medium">Vídeo do Instagram</span>
+      </div>
+      <Input
+        {...register(`depoimentos.${index}.videoUrl`)}
+        placeholder="Cole o link do reel/post"
+        className="text-xs h-8"
+      />
+      <p className="text-[10px] text-gray-400 leading-tight">Ex: instagram.com/reel/... (perfil público)</p>
+    </div>
+  )
+}
+
+function DepoimentoItem({ index, onRemove }: { index: number; onRemove: () => void }) {
+  const { watch } = useFormContext<FormData>()
+  const isVideo = watch(`depoimentos.${index}.videoUrl`) !== undefined
+  return isVideo
+    ? <DepoimentoVideo index={index} onRemove={onRemove} />
+    : <DepoimentoImagem index={index} onRemove={onRemove} />
 }
 
 function ResultadoUpload({ index, onRemove }: { index: number; onRemove: () => void }) {
@@ -240,25 +270,37 @@ export default function StepCredibilidade() {
       {/* Depoimentos */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <Label>Depoimentos em imagem (até 5)</Label>
+          <Label>Depoimentos (até 5)</Label>
           {fields.length < 5 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => append({ imagemUrl: '' })}
-              className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Adicionar
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => append({ imagemUrl: '' })}
+                className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                Print
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => append({ imagemUrl: '', videoUrl: '' })}
+                className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
+              >
+                <Video className="w-3.5 h-3.5" />
+                Vídeo do Instagram
+              </Button>
+            </div>
           )}
         </div>
-        <p className="text-xs text-gray-400 mb-3">Print de WhatsApp, Google, Instagram, etc. Serão exibidos em carrossel no site.</p>
+        <p className="text-xs text-gray-400 mb-3">Prints (WhatsApp, Google, Instagram) ou vídeos do Instagram. Serão exibidos em carrossel no site.</p>
 
         <div className="grid grid-cols-3 gap-2">
           {fields.map((field, index) => (
-            <DepoimentoUpload
+            <DepoimentoItem
               key={field.id}
               index={index}
               onRemove={() => remove(index)}
@@ -266,7 +308,7 @@ export default function StepCredibilidade() {
           ))}
           {fields.length === 0 && (
             <div className="col-span-3 text-xs text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
-              Clique em &quot;Adicionar&quot; para incluir depoimentos
+              Adicione um &quot;Print&quot; ou &quot;Vídeo do Instagram&quot;
             </div>
           )}
         </div>

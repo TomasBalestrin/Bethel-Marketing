@@ -55,7 +55,9 @@ export default async function CriarPage({
         foto2Url: site.foto2Url ?? undefined,
         foto3Url: site.foto3Url ?? undefined,
         fotoProfissionalUrl: site.fotoProfissionalUrl ?? undefined,
-        depoimentos: site.depoimentos.map((d) => ({ imagemUrl: d.imagemUrl })),
+        depoimentos: site.depoimentos.map((d) =>
+          d.videoUrl ? { imagemUrl: '', videoUrl: d.videoUrl } : { imagemUrl: d.imagemUrl }
+        ),
         resultados: site.resultados.map((r) => ({ imagemUrl: r.imagemUrl })),
         whatsapp: site.whatsapp,
         whatsappMensagem: site.whatsappMensagem,
