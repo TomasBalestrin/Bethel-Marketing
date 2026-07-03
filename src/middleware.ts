@@ -1,28 +1,30 @@
 import { createServerClient, type SetAllCookies } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Subdomínios de <appDomain> que redirecionam para um site externo já hospedado
-// em outro lugar (ex: HostGator). Chave = subdomínio, valor = URL de destino.
-const EXTERNAL_REDIRECTS: Record<string, string> = {
-  itils: 'https://itils.com.br',
+// Domínios próprios (custom) que servem um site já publicado na plataforma.
+// Chave = host completo, valor = slug do site. Para funcionar, o DNS do domínio
+// deve apontar para a Vercel e o domínio precisa estar adicionado ao projeto lá.
+const CUSTOM_DOMAINS: Record<string, string> = {
+  'itils.com.br': 'itils',
+  'www.itils.com.br': 'itils',
 }
 
 export async function middleware(request: NextRequest) {
   // Serve client sites via subdomain (e.g. clinic.bethelapps.com)
-  const hostname = request.headers.get('host') ?? ''
+  const hostname = (request.headers.get('host') ?? '').toLowerCase()
+
+  // Domínio próprio (ex: itils.com.br) apontando para um site da plataforma
+  const customSlug = CUSTOM_DOMAINS[hostname]
+  if (customSlug) {
+    return NextResponse.rewrite(new URL(`/s/${customSlug}`, request.url))
+  }
+
   const appDomain = process.env.MENTOR_DOMAIN
     || (process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).hostname : null)
 
   if (appDomain && hostname.endsWith(`.${appDomain}`)) {
     const slug = hostname.slice(0, hostname.length - appDomain.length - 1)
     if (slug && slug !== 'www') {
-      const external = EXTERNAL_REDIRECTS[slug]
-      if (external) {
-        // 307 (temporário) de propósito: se um dia o site migrar para o Bethel,
-        // o navegador não fica com o redirect cacheado permanentemente.
-        const target = new URL(request.nextUrl.pathname + request.nextUrl.search, external)
-        return NextResponse.redirect(target, 307)
-      }
       return NextResponse.rewrite(new URL(`/s/${slug}`, request.url))
     }
   }
