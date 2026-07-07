@@ -20,6 +20,49 @@ function injectTracking(html: string, metaPixelId?: string | null, gtmId?: strin
   return result
 }
 
+// CSS do carrossel de "Resultados reais" (mesmo visual do carrossel de depoimentos).
+// Classes próprias (brescar-*) para não depender de o site ter carrossel de depoimentos.
+const RESULTADOS_CAROUSEL_CSS =
+  '#resultados .brescar{position:relative;max-width:440px;margin:0 auto;padding:0 48px}' +
+  '#resultados .brescar-outer{overflow:hidden}' +
+  '#resultados .brescar-track{display:flex;transition:transform .35s ease}' +
+  '#resultados .brescar-slide{flex:0 0 100%;box-sizing:border-box;display:flex;justify-content:center;align-items:center}' +
+  '#resultados .brescar-slide img{display:block;margin:0 auto;width:auto;max-width:100%;max-height:480px;height:auto;object-fit:contain;border-radius:12px}' +
+  '#resultados .brescar-btn{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;border-radius:50%;cursor:pointer;background:var(--primary,#7d3a3a);color:#fff;font-size:18px;line-height:40px;text-align:center;padding:0;z-index:2}' +
+  '#resultados .brescar-btn.prev{left:0}' +
+  '#resultados .brescar-btn.next{right:0}' +
+  '#resultados .brescar-dots{display:flex;gap:8px;justify-content:center;margin-top:16px}' +
+  '#resultados .brescar-dot{width:8px;height:8px;border-radius:50%;border:0;padding:0;cursor:pointer;background:var(--primary,#7d3a3a);opacity:.3}' +
+  '#resultados .brescar-dot.active{opacity:1}'
+
+// Transforma a galeria (grade) de #resultados num carrossel. No-op se já for carrossel,
+// se houver menos de 2 imagens, ou se a seção não existir.
+const RESULTADOS_CAROUSEL_JS =
+  '<script>(function(){' +
+  "var sec=document.getElementById('resultados');" +
+  "if(!sec||sec.querySelector('.brescar')||sec.querySelector('.carousel-track'))return;" +
+  "var all=[].slice.call(sec.querySelectorAll('img'));if(all.length<2)return;" +
+  'var best=null,bestN=0;all.forEach(function(im){var p=im.parentElement;var n=p.querySelectorAll(":scope > img").length;if(n>bestN){bestN=n;best=p;}});' +
+  'if(!best||bestN<2)return;var gal=best;var imgs=[].slice.call(gal.querySelectorAll(":scope > img"));' +
+  "var wrap=document.createElement('div');wrap.className='brescar';" +
+  "var outer=document.createElement('div');outer.className='brescar-outer';" +
+  "var track=document.createElement('div');track.className='brescar-track';" +
+  "imgs.forEach(function(im){var s=document.createElement('div');s.className='brescar-slide';s.appendChild(im);track.appendChild(s);});" +
+  'outer.appendChild(track);' +
+  "var prev=document.createElement('button');prev.className='brescar-btn prev';prev.setAttribute('aria-label','Anterior');prev.innerHTML='&#8592;';" +
+  "var next=document.createElement('button');next.className='brescar-btn next';next.setAttribute('aria-label','Próximo');next.innerHTML='&#8594;';" +
+  "var dots=document.createElement('div');dots.className='brescar-dots';" +
+  'wrap.appendChild(outer);wrap.appendChild(prev);wrap.appendChild(next);wrap.appendChild(dots);' +
+  'gal.parentNode.replaceChild(wrap,gal);' +
+  'var total=imgs.length,current=0;' +
+  "for(var i=0;i<total;i++){(function(idx){var d=document.createElement('button');d.className='brescar-dot'+(idx===0?' active':'');d.setAttribute('aria-label','Slide '+(idx+1));d.addEventListener('click',function(){goTo(idx);});dots.appendChild(d);})(i);}" +
+  "function goTo(n){current=(n+total)%total;track.style.transform='translateX(-'+(current*100)+'%)';var ds=dots.querySelectorAll('.brescar-dot');for(var i=0;i<ds.length;i++){ds[i].classList.toggle('active',i===current);}}" +
+  "prev.addEventListener('click',function(){goTo(current-1);});next.addEventListener('click',function(){goTo(current+1);});" +
+  'var sx=null;' +
+  "outer.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});" +
+  "outer.addEventListener('touchend',function(e){if(sx===null)return;var dx=sx-e.changedTouches[0].clientX;if(Math.abs(dx)>40){goTo(dx>0?current+1:current-1);}sx=null;});" +
+  '})();</script>'
+
 // Lê a cor de FUNDO real da logo amostrando os cantos da imagem (o fundo).
 // Retorna { hex, light } ou null se a logo for transparente/erro.
 async function logoBgColor(logoUrl: string): Promise<{ hex: string; light: boolean } | null> {
@@ -115,8 +158,13 @@ export async function GET(
           footerBorder
       }
     }
-    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}footer img{height:72px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#espaco img{aspect-ratio:auto !important;height:auto !important;object-fit:contain !important}#servicos img,.service-card img{object-fit:contain !important;height:180px !important;width:100% !important;background:#f7f7f7 !important;padding:8px !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}</style>`
+    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}footer img{height:72px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#espaco img{aspect-ratio:auto !important;height:auto !important;object-fit:contain !important}#servicos img,.service-card img{object-fit:contain !important;height:180px !important;width:100% !important;background:#f7f7f7 !important;padding:8px !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}${RESULTADOS_CAROUSEL_CSS}</style>`
     html = html.replace('</head>', `${fix}</head>`)
+  }
+
+  // Converte a galeria de "Resultados reais" em carrossel (igual ao de depoimentos)
+  if (html.includes('</body>')) {
+    html = html.replace('</body>', `${RESULTADOS_CAROUSEL_JS}</body>`)
   }
 
   return new NextResponse(html, {
