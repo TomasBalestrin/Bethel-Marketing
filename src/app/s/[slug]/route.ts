@@ -78,21 +78,25 @@ async function logoBgColor(logoUrl: string): Promise<{ hex: string; light: boole
       [0, 0], [W - 1, 0], [0, H - 1], [W - 1, H - 1],
       [Math.floor(W / 2), 0], [0, Math.floor(H / 2)], [W - 1, Math.floor(H / 2)],
     ]
-    const counts: Record<string, number> = {}
+    // Agrupa cores parecidas (bucket grosso só para CONTAR), mas acumula a cor
+    // REAL de cada grupo para usar a média exata depois — sem distorcer o tom.
+    const groups: Record<string, { n: number; r: number; g: number; b: number }> = {}
     let transparent = 0
     for (const [x, y] of pts) {
       const i = (y * W + x) * 4
       if (data[i + 3] < 128) { transparent++; continue }
-      const r = Math.min(255, Math.round(data[i] / 16) * 16)
-      const g = Math.min(255, Math.round(data[i + 1] / 16) * 16)
-      const b = Math.min(255, Math.round(data[i + 2] / 16) * 16)
-      const k = `${r},${g},${b}`
-      counts[k] = (counts[k] || 0) + 1
+      const r = data[i], g = data[i + 1], b = data[i + 2]
+      const key = `${Math.round(r / 24)},${Math.round(g / 24)},${Math.round(b / 24)}`
+      const c = (groups[key] ??= { n: 0, r: 0, g: 0, b: 0 })
+      c.n++; c.r += r; c.g += g; c.b += b
     }
     if (transparent >= pts.length - 1) return null // logo transparente: não força barra
-    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]
+    const top = Object.values(groups).sort((a, b) => b.n - a.n)[0]
     if (!top) return null
-    const [r, g, b] = top[0].split(',').map(Number)
+    // cor final = média REAL da cor dominante (tom fiel ao fundo da logo)
+    const r = Math.round(top.r / top.n)
+    const g = Math.round(top.g / top.n)
+    const b = Math.round(top.b / top.n)
     const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
     const lum = 0.299 * r + 0.587 * g + 0.114 * b
     return { hex, light: lum > 160 }
