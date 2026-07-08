@@ -4,7 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { googleConfigured } from '@/lib/google/oauth'
 import { getValidAccessToken } from '@/lib/google/tokens'
-import { listAllLocations, GoogleApiError } from '@/lib/google/business'
+import {
+  listAllLocations, getLocationDetails, updateLocationDetails, GoogleApiError,
+  type GbpLocationDetails,
+} from '@/lib/google/business'
+
+export type { GbpLocationDetails } from '@/lib/google/business'
 
 type Result<T = void> =
   | { success: true; data: T }
@@ -145,5 +150,52 @@ export async function removeLocation(id: string): Promise<Result> {
     return { success: true, data: undefined }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao remover' }
+  }
+}
+
+// ── Perfil (ver + editar) ──────────────────────────────────────────────────────
+
+export async function getLocationProfile(id: string): Promise<Result<GbpLocationDetails>> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+    const details = await getLocationDetails(token, row.locationName)
+    return { success: true, data: details }
+  } catch (e) {
+    if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Acesso à API ainda não aprovado pelo Google.' }
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao carregar perfil' }
+  }
+}
+
+export async function saveLocationProfile(
+  id: string,
+  patch: { title?: string; phone?: string; website?: string; description?: string },
+): Promise<Result> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+    await updateLocationDetails(token, row.locationName, patch)
+    // Atualiza o cache local dos campos que guardamos
+    await prisma.gbpLocation.update({
+      where: { id },
+      data: {
+        title: patch.title ?? row.title,
+        phone: patch.phone ?? row.phone,
+        website: patch.website ?? row.website,
+        lastSyncedAt: new Date(),
+      },
+    })
+    return { success: true, data: undefined }
+  } catch (e) {
+    if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Sem permissão para editar este perfil (verifique se você é proprietário/gerente).' }
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar' }
   }
 }

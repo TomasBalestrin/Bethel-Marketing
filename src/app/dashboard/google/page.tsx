@@ -7,9 +7,10 @@ import {
   listAvailableLocations, connectLocation, listConnectedLocations, removeLocation,
   type GoogleStatus, type AvailableLocation, type ConnectedLocation,
 } from '@/app/actions/google'
+import { LocationProfilePanel } from '@/components/google/LocationProfilePanel'
 
 const MODULOS = [
-  { emoji: '🏢', titulo: 'Perfil', desc: 'Ver e editar nome, categorias, horários, telefone, descrição e atributos' },
+  { emoji: '🏢', titulo: 'Perfil', desc: 'Ver e editar nome, telefone, site e descrição (categorias e horários em breve)', pronto: true },
   { emoji: '⭐', titulo: 'Avaliações', desc: 'Listar avaliações e responder (com rascunho da IA, você aprova)' },
   { emoji: '📣', titulo: 'Postagens', desc: 'Criar, agendar e publicar postagens no perfil' },
   { emoji: '📈', titulo: 'Desempenho', desc: 'Dashboard mês a mês: impressões, cliques, ligações, rotas' },
@@ -36,6 +37,7 @@ function GoogleInner() {
   const [carregandoLocais, setCarregandoLocais] = useState(false)
   const [conectandoLoc, setConectandoLoc] = useState<string | null>(null)
   const [locMsg, setLocMsg] = useState('')
+  const [perfilAberto, setPerfilAberto] = useState<string | null>(null)
 
   const connected = params.get('connected') === '1'
   const erro = params.get('erro')
@@ -151,13 +153,22 @@ function GoogleInner() {
 
             {/* Perfis conectados */}
             {conectados.map(loc => (
-              <div key={loc.id} className="bg-white border border-gray-200 rounded-xl p-4 flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">🏢 {loc.title}</p>
-                  <p className="text-xs text-gray-500">{[loc.primaryCategory, loc.address].filter(Boolean).join(' • ')}</p>
+              <div key={loc.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">🏢 {loc.title}</p>
+                    <p className="text-xs text-gray-500">{[loc.primaryCategory, loc.address].filter(Boolean).join(' • ')}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => setPerfilAberto(perfilAberto === loc.id ? null : loc.id)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100">
+                      {perfilAberto === loc.id ? 'Fechar' : '✏️ Ver / editar perfil'}
+                    </button>
+                    <button onClick={() => removerLocal(loc.id)}
+                      className="text-gray-300 hover:text-red-500 text-sm">🗑️</button>
+                  </div>
                 </div>
-                <button onClick={() => removerLocal(loc.id)}
-                  className="text-gray-300 hover:text-red-500 text-sm flex-shrink-0">🗑️</button>
+                {perfilAberto === loc.id && <LocationProfilePanel id={loc.id} />}
               </div>
             ))}
 
@@ -196,10 +207,15 @@ function GoogleInner() {
         {/* Visão geral dos módulos */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
           {MODULOS.map(m => (
-            <div key={m.titulo} className="bg-white border border-gray-200 rounded-xl p-4 flex items-start gap-3 opacity-80">
+            <div key={m.titulo} className={`bg-white border rounded-xl p-4 flex items-start gap-3 ${m.pronto ? 'border-green-200' : 'border-gray-200 opacity-80'}`}>
               <span className="text-xl">{m.emoji}</span>
               <div>
-                <p className="text-sm font-semibold text-gray-800">{m.titulo} <span className="text-[10px] font-medium text-gray-400 align-middle">em breve</span></p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {m.titulo}{' '}
+                  <span className={`text-[10px] font-medium align-middle ${m.pronto ? 'text-green-600' : 'text-gray-400'}`}>
+                    {m.pronto ? '✅ ativo' : 'em breve'}
+                  </span>
+                </p>
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{m.desc}</p>
               </div>
             </div>
