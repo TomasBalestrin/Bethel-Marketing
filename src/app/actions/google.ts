@@ -309,8 +309,15 @@ async function reviewLocation(id: string) {
 }
 
 function reviewApiError(e: unknown): string {
-  if (e instanceof GoogleApiError && (e.status === 403 || e.status === 404)) {
-    return 'Acesso às avaliações (Google My Business API v4) não liberado para este projeto/perfil. Confirme o allowlist e que você é gerente do perfil.'
+  if (e instanceof GoogleApiError) {
+    const detalhe = e.message.replace(/^\d+:\s*/, '').slice(0, 220)
+    if (e.status === 403) {
+      return `Avaliações bloqueadas (403). Ative a "Google My Business API" (mybusiness.googleapis.com) no Google Cloud e confirme que a conta conectada é gerente/proprietária do perfil. Detalhe do Google: ${detalhe}`
+    }
+    if (e.status === 404) {
+      return `Perfil não encontrado na API v4 (404). Detalhe do Google: ${detalhe}`
+    }
+    return `Erro nas avaliações (${e.status}). Detalhe: ${detalhe}`
   }
   return e instanceof Error ? e.message : 'Erro nas avaliações'
 }
