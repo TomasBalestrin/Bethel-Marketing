@@ -24,9 +24,6 @@ export function CompetitorsPanel({ id }: { id: string }) {
   const ranking = data?.lista ?? []
   const posicao = (() => { const i = ranking.findIndex(c => c.isSelf); return i >= 0 ? i + 1 : null })()
 
-  const Sim = () => <span className="text-green-600">✓</span>
-  const Nao = () => <span className="text-gray-300">–</span>
-
   return (
     <div>
       {carregando && (
@@ -61,35 +58,22 @@ export function CompetitorsPanel({ id }: { id: string }) {
             </p>
           )}
 
-          <div className="border border-gray-100 rounded-lg overflow-x-auto">
-            <div className="min-w-[460px]">
-              <div className="grid grid-cols-[24px_1fr_auto_auto_auto_38px_38px_38px] gap-2 px-3 py-2 bg-gray-50 text-[10px] font-semibold text-gray-400 uppercase tracking-wide items-center">
-                <span>#</span><span>Negócio</span>
-                <span className="text-right">Score</span>
-                <span className="text-right">Nota</span>
-                <span className="text-right">Aval.</span>
-                <span className="text-center" title="Fotos">📷</span>
-                <span className="text-center" title="Site">🌐</span>
-                <span className="text-center" title="Horários">🕒</span>
-              </div>
-              {ranking.map((c, i) => (
-                <div key={(c.placeId ?? '') + i}
-                  className={`grid grid-cols-[24px_1fr_auto_auto_auto_38px_38px_38px] gap-2 px-3 py-2 text-xs items-center border-t border-gray-50 ${c.isSelf ? 'bg-blue-50/70 font-semibold' : ''}`}>
-                  <span className="text-gray-400">{i + 1}</span>
-                  <span className="truncate text-gray-800">{c.name}{c.isSelf && <span className="text-blue-600"> (você)</span>}</span>
-                  <span className="text-right text-gray-800">{c.score}</span>
-                  <span className="text-right text-gray-700 whitespace-nowrap">{c.rating != null ? c.rating.toFixed(1) : '–'}</span>
-                  <span className="text-right text-gray-700">{fmt(c.reviews)}</span>
-                  <span className="text-center text-gray-600">{c.fotos > 0 ? (c.fotos >= 10 ? '10+' : c.fotos) : <Nao />}</span>
-                  <span className="text-center">{c.temSite ? <Sim /> : <Nao />}</span>
-                  <span className="text-center">{c.temHorarios ? <Sim /> : <Nao />}</span>
-                </div>
-              ))}
+          <div className="border border-gray-100 rounded-lg overflow-hidden">
+            <div className="grid grid-cols-[28px_1fr_auto] gap-2 px-3 py-2 bg-gray-50 text-[10px] font-semibold text-gray-400 uppercase tracking-wide items-center">
+              <span>#</span><span>Negócio</span><span className="text-right">Avaliações</span>
             </div>
+            {ranking.map((c, i) => (
+              <div key={(c.placeId ?? '') + i}
+                className={`grid grid-cols-[28px_1fr_auto] gap-2 px-3 py-2.5 text-sm items-center border-t border-gray-50 ${c.isSelf ? 'bg-blue-50/70 font-semibold' : ''}`}>
+                <span className="text-gray-400 text-xs">{i + 1}</span>
+                <span className="truncate text-gray-800">{c.name}{c.isSelf && <span className="text-blue-600"> (você)</span>}</span>
+                <span className="text-right text-gray-600 text-xs whitespace-nowrap">{fmt(c.reviews)} aval.</span>
+              </div>
+            ))}
           </div>
 
           <p className="text-[10px] text-gray-400 leading-relaxed">
-            Ordem conforme o ranking do Google para essa busca (Places API). O <b>Score</b> (0-100) indica a otimização de cada perfil pelos sinais públicos, para você comparar quem está mais bem estruturado.
+            Ordem conforme o ranking do Google para essa busca (Places API). O nº de avaliações é uma referência: repare que nem sempre quem tem mais avaliações fica na frente, porque o Google também considera proximidade e relevância.
           </p>
 
           <div className="flex justify-end">
