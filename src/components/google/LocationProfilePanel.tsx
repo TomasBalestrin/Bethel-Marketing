@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getLocationProfile, saveLocationProfile, saveLocationHours, type GbpLocationDetails } from '@/app/actions/google'
+import { getLocationProfile, saveLocationProfile, saveLocationHours, saveLocationAddress, type GbpLocationDetails } from '@/app/actions/google'
 
 const DIAS: Record<string, string> = {
   MONDAY: 'Segunda', TUESDAY: 'Terça', WEDNESDAY: 'Quarta', THURSDAY: 'Quinta',
@@ -85,6 +85,66 @@ function HoursEditor({ id, initial }: { id: string; initial: GbpLocationDetails[
         <button onClick={salvar} disabled={salvando}
           className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 disabled:opacity-40">
           {salvando ? 'Salvando...' : 'Salvar horários'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Editor de endereço ─────────────────────────────────────────────────────────
+
+function AddressEditor({ id, det }: { id: string; det: GbpLocationDetails }) {
+  const [linha1, setLinha1] = useState(det.addressLines[0] ?? '')
+  const [linha2, setLinha2] = useState(det.addressLines.slice(1).join(', '))
+  const [cidade, setCidade] = useState(det.locality)
+  const [uf, setUf] = useState(det.adminArea)
+  const [cep, setCep] = useState(det.postalCode)
+  const [salvando, setSalvando] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  async function salvar() {
+    setSalvando(true); setMsg('')
+    const addressLines = [linha1.trim(), linha2.trim()].filter(Boolean)
+    const res = await saveLocationAddress(id, {
+      addressLines, locality: cidade.trim(), administrativeArea: uf.trim(), postalCode: cep.trim(), regionCode: det.regionCode || 'BR',
+    })
+    setMsg(res.success ? '✅ Endereço salvo! O Google pode pedir reverificação do perfil.' : '❌ ' + res.error)
+    setSalvando(false)
+  }
+
+  const label = 'block text-[11px] font-medium text-gray-500 mb-1'
+  const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300'
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className={label}>Logradouro e número</label>
+        <input className={input} value={linha1} onChange={e => setLinha1(e.target.value)} placeholder="Ex: Rua das Flores, 123" />
+      </div>
+      <div>
+        <label className={label}>Complemento / Bairro (opcional)</label>
+        <input className={input} value={linha2} onChange={e => setLinha2(e.target.value)} placeholder="Ex: Sala 2, Centro" />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="col-span-2 sm:col-span-1">
+          <label className={label}>Cidade</label>
+          <input className={input} value={cidade} onChange={e => setCidade(e.target.value)} />
+        </div>
+        <div>
+          <label className={label}>UF</label>
+          <input className={input} value={uf} onChange={e => setUf(e.target.value)} placeholder="PB" maxLength={2} />
+        </div>
+        <div>
+          <label className={label}>CEP</label>
+          <input className={input} value={cep} onChange={e => setCep(e.target.value)} placeholder="58000-000" />
+        </div>
+      </div>
+      <p className="text-[10px] text-amber-600">Alterar o endereço pode fazer o Google pedir uma nova verificação do perfil.</p>
+      {msg && <p className="text-xs bg-gray-50 border border-gray-200 rounded-lg p-2">{msg}</p>}
+      <div className="flex justify-end">
+        <button onClick={salvar} disabled={salvando}
+          className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 disabled:opacity-40">
+          {salvando ? 'Salvando...' : 'Salvar endereço'}
         </button>
       </div>
     </div>
@@ -185,14 +245,19 @@ export function LocationProfilePanel({ id }: { id: string }) {
         <HoursEditor id={id} initial={det.regularHours} />
       </div>
 
+      {/* Endereço */}
+      <div>
+        <label className={label}>Endereço</label>
+        <AddressEditor id={id} det={det} />
+      </div>
+
       {/* Somente leitura */}
       <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-xs text-gray-600">
         {det.primaryCategory && <p><span className="text-gray-400">Categoria principal:</span> {det.primaryCategory}</p>}
         {det.additionalCategories.length > 0 && (
           <p><span className="text-gray-400">Outras categorias:</span> {det.additionalCategories.join(', ')}</p>
         )}
-        {det.address && <p><span className="text-gray-400">Endereço:</span> {det.address}</p>}
-        <p className="text-[10px] text-gray-400 pt-1">Categoria e endereço serão editáveis em breve.</p>
+        <p className="text-[10px] text-gray-400 pt-1">Categorias e serviços serão editáveis em breve.</p>
       </div>
     </div>
   )

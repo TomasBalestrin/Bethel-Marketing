@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { googleConfigured } from '@/lib/google/oauth'
 import { getValidAccessToken } from '@/lib/google/tokens'
 import {
-  listAllLocations, getLocationDetails, updateLocationDetails, updateLocationHours, GoogleApiError,
+  listAllLocations, getLocationDetails, updateLocationDetails, updateLocationHours, updateLocationAddress, GoogleApiError,
   type GbpLocationDetails,
 } from '@/lib/google/business'
 
@@ -236,6 +236,34 @@ export async function saveLocationHours(
   } catch (e) {
     if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Sem permissão para editar este perfil (verifique se você é proprietário/gerente).' }
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar horários' }
+  }
+}
+
+export async function saveLocationAddress(
+  id: string,
+  address: { addressLines: string[]; locality: string; administrativeArea: string; postalCode: string; regionCode?: string },
+): Promise<Result> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+    if (!address.addressLines.some(l => l.trim()) || !address.locality.trim()) {
+      return { success: false, error: 'Preencha ao menos o logradouro e a cidade.' }
+    }
+    await updateLocationAddress(token, row.locationName, {
+      regionCode: address.regionCode || 'BR',
+      addressLines: address.addressLines,
+      locality: address.locality,
+      administrativeArea: address.administrativeArea,
+      postalCode: address.postalCode,
+    })
+    return { success: true, data: undefined }
+  } catch (e) {
+    if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Sem permissão para editar este perfil (verifique se você é proprietário/gerente).' }
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar endereço' }
   }
 }
 

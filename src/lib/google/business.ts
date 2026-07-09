@@ -101,6 +101,12 @@ export type GbpLocationDetails = {
   city: string | null
   lat: number | null
   lng: number | null
+  // endereço estruturado (para edição)
+  addressLines: string[]
+  locality: string
+  adminArea: string
+  postalCode: string
+  regionCode: string
   phone: string | null
   website: string | null
   description: string | null
@@ -137,6 +143,11 @@ export async function getLocationDetails(accessToken: string, locationName: stri
     city: addr?.locality ? String(addr.locality) : null,
     lat: latlng?.latitude != null ? Number(latlng.latitude) : null,
     lng: latlng?.longitude != null ? Number(latlng.longitude) : null,
+    addressLines: Array.isArray(addr?.addressLines) ? (addr!.addressLines as unknown[]).map(String) : [],
+    locality: addr?.locality ? String(addr.locality) : '',
+    adminArea: addr?.administrativeArea ? String(addr.administrativeArea) : '',
+    postalCode: addr?.postalCode ? String(addr.postalCode) : '',
+    regionCode: addr?.regionCode ? String(addr.regionCode) : 'BR',
     phone: phones?.primaryPhone ? String(phones.primaryPhone) : null,
     website: l.websiteUri ? String(l.websiteUri) : null,
     description: profile?.description ? String(profile.description) : null,
@@ -182,6 +193,27 @@ export async function updateLocationHours(
 ): Promise<void> {
   const url = `${BUSINESS_INFO}/${locationName}?updateMask=regularHours`
   await gpatch(url, accessToken, { regularHours: { periods } })
+}
+
+export type GbpAddressInput = {
+  regionCode: string; addressLines: string[]; locality: string; administrativeArea: string; postalCode: string
+}
+
+// Atualiza o endereço do local. Pode disparar reverificação do perfil no Google.
+export async function updateLocationAddress(
+  accessToken: string, locationName: string, address: GbpAddressInput,
+): Promise<void> {
+  const url = `${BUSINESS_INFO}/${locationName}?updateMask=storefrontAddress`
+  await gpatch(url, accessToken, {
+    storefrontAddress: {
+      regionCode: address.regionCode || 'BR',
+      languageCode: 'pt-BR',
+      addressLines: address.addressLines.filter(Boolean),
+      locality: address.locality,
+      administrativeArea: address.administrativeArea,
+      postalCode: address.postalCode,
+    },
+  })
 }
 
 // Lista todos os locais de todas as contas do usuário.
