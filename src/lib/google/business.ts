@@ -98,6 +98,9 @@ export type GbpLocationDetails = {
   primaryCategory: string | null
   additionalCategories: string[]
   address: string | null
+  city: string | null
+  lat: number | null
+  lng: number | null
   phone: string | null
   website: string | null
   description: string | null
@@ -112,7 +115,7 @@ function fmtTime(t: Record<string, unknown> | undefined): string {
 }
 
 export async function getLocationDetails(accessToken: string, locationName: string): Promise<GbpLocationDetails> {
-  const readMask = 'name,title,storefrontAddress,phoneNumbers,categories,websiteUri,regularHours,profile'
+  const readMask = 'name,title,storefrontAddress,phoneNumbers,categories,websiteUri,regularHours,profile,latlng'
   const url = `${BUSINESS_INFO}/${locationName}?readMask=${encodeURIComponent(readMask)}`
   const l = (await gget(url, accessToken)) as Record<string, unknown>
   const categories = l.categories as Record<string, unknown> | undefined
@@ -123,12 +126,17 @@ export async function getLocationDetails(accessToken: string, locationName: stri
   const profile = l.profile as Record<string, unknown> | undefined
   const hours = l.regularHours as Record<string, unknown> | undefined
   const periods = Array.isArray(hours?.periods) ? (hours!.periods as Record<string, unknown>[]) : []
+  const addr = l.storefrontAddress as Record<string, unknown> | undefined
+  const latlng = l.latlng as Record<string, unknown> | undefined
   return {
     locationName: String(l.name ?? locationName),
     title: String(l.title ?? ''),
     primaryCategory: primary?.displayName ? String(primary.displayName) : null,
     additionalCategories: additional.map(c => String(c.displayName ?? '')).filter(Boolean),
-    address: formatAddress(l.storefrontAddress as Record<string, unknown> | undefined),
+    address: formatAddress(addr),
+    city: addr?.locality ? String(addr.locality) : null,
+    lat: latlng?.latitude != null ? Number(latlng.latitude) : null,
+    lng: latlng?.longitude != null ? Number(latlng.longitude) : null,
     phone: phones?.primaryPhone ? String(phones.primaryPhone) : null,
     website: l.websiteUri ? String(l.websiteUri) : null,
     description: profile?.description ? String(profile.description) : null,

@@ -10,6 +10,7 @@ import {
 import { LocationProfilePanel } from '@/components/google/LocationProfilePanel'
 import { RecommendationsPanel } from '@/components/google/RecommendationsPanel'
 import { PerformancePanel } from '@/components/google/PerformancePanel'
+import { CompetitorsPanel } from '@/components/google/CompetitorsPanel'
 
 const MODULOS = [
   { emoji: '🏢', titulo: 'Perfil', desc: 'Ver e editar nome, telefone, site e descrição (categorias e horários em breve)', pronto: true },
@@ -17,7 +18,7 @@ const MODULOS = [
   { emoji: '📣', titulo: 'Postagens', desc: 'Criar, agendar e publicar postagens no perfil' },
   { emoji: '📈', titulo: 'Desempenho', desc: 'Visualizações, ligações, rotas, cliques e conversas (30 dias vs. anteriores)', pronto: true },
   { emoji: '✨', titulo: 'Recomendações IA', desc: 'Análise do perfil com sugestões priorizadas e acionáveis', pronto: true },
-  { emoji: '🔍', titulo: 'Concorrentes', desc: 'Comparar dados públicos (nota, nº de avaliações, fotos)' },
+  { emoji: '🔍', titulo: 'Concorrentes', desc: 'Comparar nota e nº de avaliações com concorrentes da sua cidade', pronto: true },
 ]
 
 export default function GooglePage() {
@@ -42,6 +43,11 @@ function GoogleInner() {
   const [perfilAberto, setPerfilAberto] = useState<string | null>(null)
   const [recsAberto, setRecsAberto] = useState<string | null>(null)
   const [desempenhoAberto, setDesempenhoAberto] = useState<string | null>(null)
+  const [concorrentesAberto, setConcorrentesAberto] = useState<string | null>(null)
+
+  function fecharTodos() {
+    setPerfilAberto(null); setDesempenhoAberto(null); setConcorrentesAberto(null); setRecsAberto(null)
+  }
 
   const connected = params.get('connected') === '1'
   const erro = params.get('erro')
@@ -164,15 +170,19 @@ function GoogleInner() {
                     <p className="text-xs text-gray-500">{[loc.primaryCategory, loc.address].filter(Boolean).join(' • ')}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                    <button onClick={() => { setPerfilAberto(perfilAberto === loc.id ? null : loc.id); setRecsAberto(null); setDesempenhoAberto(null) }}
+                    <button onClick={() => { const o = perfilAberto === loc.id; fecharTodos(); if (!o) setPerfilAberto(loc.id) }}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100">
                       {perfilAberto === loc.id ? 'Fechar' : '✏️ Ver / editar perfil'}
                     </button>
-                    <button onClick={() => { setDesempenhoAberto(desempenhoAberto === loc.id ? null : loc.id); setPerfilAberto(null); setRecsAberto(null) }}
+                    <button onClick={() => { const o = desempenhoAberto === loc.id; fecharTodos(); if (!o) setDesempenhoAberto(loc.id) }}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-green-200 text-green-700 bg-green-50 hover:bg-green-100">
                       {desempenhoAberto === loc.id ? 'Fechar' : '📈 Desempenho'}
                     </button>
-                    <button onClick={() => { setRecsAberto(recsAberto === loc.id ? null : loc.id); setPerfilAberto(null); setDesempenhoAberto(null) }}
+                    <button onClick={() => { const o = concorrentesAberto === loc.id; fecharTodos(); if (!o) setConcorrentesAberto(loc.id) }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100">
+                      {concorrentesAberto === loc.id ? 'Fechar' : '🔍 Concorrentes'}
+                    </button>
+                    <button onClick={() => { const o = recsAberto === loc.id; fecharTodos(); if (!o) setRecsAberto(loc.id) }}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100">
                       {recsAberto === loc.id ? 'Fechar' : '✨ Recomendações IA'}
                     </button>
@@ -182,6 +192,7 @@ function GoogleInner() {
                 </div>
                 {perfilAberto === loc.id && <LocationProfilePanel id={loc.id} />}
                 {desempenhoAberto === loc.id && <PerformancePanel id={loc.id} />}
+                {concorrentesAberto === loc.id && <CompetitorsPanel id={loc.id} />}
                 {recsAberto === loc.id && <RecommendationsPanel id={loc.id} />}
               </div>
             ))}

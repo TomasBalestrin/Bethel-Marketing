@@ -11,6 +11,7 @@ import {
 
 import { analyzeProfile } from '@/lib/google/recommendations'
 import { getPerformance } from '@/lib/google/performance'
+import { placesConfigured, getPlaceById, searchCompetitors, type Competitor } from '@/lib/google/competitors'
 
 export type { GbpLocationDetails } from '@/lib/google/business'
 export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
@@ -244,5 +245,55 @@ export async function getLocationPerformance(id: string, days = 30): Promise<Res
       return { success: false, error: 'Ative a Business Profile Performance API no Google Cloud e confirme que o perfil está verificado.' }
     }
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao carregar desempenho' }
+  }
+}
+
+// ── Concorrentes (Places API) ──────────────────────────────────────────────────
+
+export type CompetitorsResult = {
+  self: Competitor | null
+  ranking: Competitor[]   // inclui o próprio negócio, ordenado por nº de avaliações
+  posicao: number | null  // posição (1-based) do próprio negócio no ranking
+  total: number
+  categoria: string
+  cidade: string
+}
+
+export async function getLocationCompetitors(id: string): Promise<Result<CompetitorsResult> & { naoConfigurado?: boolean }> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  if (!placesConfigured()) {
+    return { success: false, error: 'A chave da Places API (GOOGLE_PLACES_API_KEY) ainda não foi configurada no servidor.', naoConfigurado: true }
+  }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+
+    const det = await getLocationDetails(token, row.locationName)
+    const categoria = det.primaryCategory
+    const cidade = det.city || (row.address ? row.address.split(' — ')[1] : null) || null
+    if (!categoria) return { success: false, error: 'O perfil não tem categoria principal definida para comparar.' }
+    if (!cidade) return { success: false, error: 'O perfil não tem cidade/endereço para comparar concorrentes.' }
+
+    const encontrados = await searchCompetitors({ category: categoria, city: cidade, lat: det.lat, lng: det.lng })
+
+    // próprio negócio (por placeId, se tivermos)
+    let self: Competitor | null = row.placeId
+      ? encontrados.find(c => c.placeId === row.placeId) ?? await getPlaceById(row.placeId)
+      : null
+    if (self) self = { ...self, isSelf: true }
+
+    // ranking = concorrentes (sem o próprio) + o próprio, por nº de avaliações
+    const outros = encontrados.filter(c => !(row.placeId && c.placeId === row.placeId))
+    const ranking = [...outros, ...(self ? [self] : [])]
+      .sort((a, b) => b.reviews - a.reviews || (b.rating ?? 0) - (a.rating ?? 0))
+      .slice(0, 15)
+    const posicao = self ? ranking.findIndex(c => c.isSelf) + 1 : null
+
+    return { success: true, data: { self, ranking, posicao: posicao && posicao > 0 ? posicao : null, total: ranking.length, categoria, cidade } }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao buscar concorrentes' }
   }
 }
