@@ -11,10 +11,11 @@ import { LocationProfilePanel } from '@/components/google/LocationProfilePanel'
 import { RecommendationsPanel } from '@/components/google/RecommendationsPanel'
 import { PerformancePanel } from '@/components/google/PerformancePanel'
 import { CompetitorsPanel } from '@/components/google/CompetitorsPanel'
+import { ReviewsPanel } from '@/components/google/ReviewsPanel'
 
 const MODULOS = [
   { emoji: '🏢', titulo: 'Perfil', desc: 'Ver e editar nome, telefone, site e descrição (categorias e horários em breve)', pronto: true },
-  { emoji: '⭐', titulo: 'Avaliações', desc: 'Listar avaliações e responder (com rascunho da IA, você aprova)' },
+  { emoji: '⭐', titulo: 'Avaliações', desc: 'Listar avaliações e responder (com rascunho da IA, você aprova)', pronto: true },
   { emoji: '📣', titulo: 'Postagens', desc: 'Criar, agendar e publicar postagens no perfil' },
   { emoji: '📈', titulo: 'Desempenho', desc: 'Visualizações, ligações, rotas, cliques e conversas (30 dias vs. anteriores)', pronto: true },
   { emoji: '✨', titulo: 'Recomendações IA', desc: 'Análise do perfil com sugestões priorizadas e acionáveis', pronto: true },
@@ -44,9 +45,10 @@ function GoogleInner() {
   const [recsAberto, setRecsAberto] = useState<string | null>(null)
   const [desempenhoAberto, setDesempenhoAberto] = useState<string | null>(null)
   const [concorrentesAberto, setConcorrentesAberto] = useState<string | null>(null)
+  const [avaliacoesAberto, setAvaliacoesAberto] = useState<string | null>(null)
 
   function fecharTodos() {
-    setPerfilAberto(null); setDesempenhoAberto(null); setConcorrentesAberto(null); setRecsAberto(null)
+    setPerfilAberto(null); setDesempenhoAberto(null); setConcorrentesAberto(null); setRecsAberto(null); setAvaliacoesAberto(null)
   }
 
   const connected = params.get('connected') === '1'
@@ -178,6 +180,10 @@ function GoogleInner() {
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-green-200 text-green-700 bg-green-50 hover:bg-green-100">
                       {desempenhoAberto === loc.id ? 'Fechar' : '📈 Desempenho'}
                     </button>
+                    <button onClick={() => { const o = avaliacoesAberto === loc.id; fecharTodos(); if (!o) setAvaliacoesAberto(loc.id) }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100">
+                      {avaliacoesAberto === loc.id ? 'Fechar' : '⭐ Avaliações'}
+                    </button>
                     <button onClick={() => { const o = concorrentesAberto === loc.id; fecharTodos(); if (!o) setConcorrentesAberto(loc.id) }}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100">
                       {concorrentesAberto === loc.id ? 'Fechar' : '🔍 Concorrentes'}
@@ -192,6 +198,7 @@ function GoogleInner() {
                 </div>
                 {perfilAberto === loc.id && <LocationProfilePanel id={loc.id} />}
                 {desempenhoAberto === loc.id && <PerformancePanel id={loc.id} />}
+                {avaliacoesAberto === loc.id && <ReviewsPanel id={loc.id} />}
                 {concorrentesAberto === loc.id && <CompetitorsPanel id={loc.id} />}
                 {recsAberto === loc.id && <RecommendationsPanel id={loc.id} />}
               </div>

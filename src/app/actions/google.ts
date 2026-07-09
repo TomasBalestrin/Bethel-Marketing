@@ -12,10 +12,12 @@ import {
 import { analyzeProfile } from '@/lib/google/recommendations'
 import { getPerformance } from '@/lib/google/performance'
 import { placesConfigured, getPlaceById, searchCompetitors, type Competitor } from '@/lib/google/competitors'
+import { listReviews, replyToReview, draftReply } from '@/lib/google/reviews'
 
 export type { GbpLocationDetails } from '@/lib/google/business'
 export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
 export type { PerfResult, PerfMetric } from '@/lib/google/performance'
+export type { GbpReview, ReviewsResult } from '@/lib/google/reviews'
 
 type Result<T = void> =
   | { success: true; data: T }
@@ -290,5 +292,65 @@ export async function getLocationCompetitors(id: string): Promise<Result<Competi
     return { success: true, data: { self, lista, categoria, cidade } }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao buscar concorrentes' }
+  }
+}
+
+// ── Avaliações (API v4) ────────────────────────────────────────────────────────
+
+async function reviewLocation(id: string) {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { ok: false as const, error: 'Não autorizado' }
+  const row = await prisma.gbpLocation.findUnique({ where: { id } })
+  if (!row || row.userId !== dbUser.id) return { ok: false as const, error: 'Perfil não encontrado' }
+  const token = await getValidAccessToken(dbUser.id)
+  if (!token) return { ok: false as const, error: 'Conta Google não conectada' }
+  if (!row.accountName) return { ok: false as const, error: 'Conta do perfil não identificada. Remova e reconecte este perfil.' }
+  return { ok: true as const, row, token, dbUser, accountName: row.accountName, locationName: row.locationName }
+}
+
+function reviewApiError(e: unknown): string {
+  if (e instanceof GoogleApiError && (e.status === 403 || e.status === 404)) {
+    return 'Acesso às avaliações (Google My Business API v4) não liberado para este projeto/perfil. Confirme o allowlist e que você é gerente do perfil.'
+  }
+  return e instanceof Error ? e.message : 'Erro nas avaliações'
+}
+
+export async function getLocationReviews(id: string): Promise<Result<import('@/lib/google/reviews').ReviewsResult>> {
+  const ctx = await reviewLocation(id)
+  if (!ctx.ok) return { success: false, error: ctx.error }
+  try {
+    const data = await listReviews(ctx.token, ctx.accountName, ctx.locationName)
+    return { success: true, data }
+  } catch (e) {
+    return { success: false, error: reviewApiError(e) }
+  }
+}
+
+export async function draftReviewReply(
+  id: string, review: { stars: number; comment: string | null; reviewerName: string },
+): Promise<Result<{ texto: string }>> {
+  const ctx = await reviewLocation(id)
+  if (!ctx.ok) return { success: false, error: ctx.error }
+  try {
+    const texto = await draftReply({
+      businessName: ctx.row.title ?? 'nosso negócio',
+      stars: review.stars, comment: review.comment, reviewerName: review.reviewerName,
+    })
+    return { success: true, data: { texto } }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao gerar resposta' }
+  }
+}
+
+export async function sendReviewReply(id: string, reviewId: string, comment: string): Promise<Result> {
+  const ctx = await reviewLocation(id)
+  if (!ctx.ok) return { success: false, error: ctx.error }
+  const texto = comment.trim()
+  if (!texto) return { success: false, error: 'A resposta está vazia.' }
+  try {
+    await replyToReview(ctx.token, ctx.accountName, ctx.locationName, reviewId, texto)
+    return { success: true, data: undefined }
+  } catch (e) {
+    return { success: false, error: reviewApiError(e) }
   }
 }
