@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { googleConfigured } from '@/lib/google/oauth'
 import { getValidAccessToken } from '@/lib/google/tokens'
 import {
-  listAllLocations, getLocationDetails, updateLocationDetails, GoogleApiError,
+  listAllLocations, getLocationDetails, updateLocationDetails, updateLocationHours, GoogleApiError,
   type GbpLocationDetails,
 } from '@/lib/google/business'
 
@@ -205,6 +205,37 @@ export async function saveLocationProfile(
   } catch (e) {
     if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Sem permissão para editar este perfil (verifique se você é proprietário/gerente).' }
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar' }
+  }
+}
+
+// Salva horários. `dias` = para cada dia, seus intervalos "HH:MM"; dia sem intervalos = fechado.
+export async function saveLocationHours(
+  id: string, dias: { day: string; intervals: { open: string; close: string }[] }[],
+): Promise<Result> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+
+    const hm = (s: string) => {
+      const [h, m] = s.split(':').map(Number)
+      return { hours: h || 0, minutes: m || 0 }
+    }
+    const periods = []
+    for (const d of dias) {
+      for (const iv of d.intervals) {
+        if (!iv.open || !iv.close || iv.open >= iv.close) continue
+        periods.push({ openDay: d.day, openTime: hm(iv.open), closeDay: d.day, closeTime: hm(iv.close) })
+      }
+    }
+    await updateLocationHours(token, row.locationName, periods)
+    return { success: true, data: undefined }
+  } catch (e) {
+    if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Sem permissão para editar este perfil (verifique se você é proprietário/gerente).' }
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar horários' }
   }
 }
 

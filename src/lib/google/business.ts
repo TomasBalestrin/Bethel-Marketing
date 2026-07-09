@@ -171,6 +171,19 @@ export async function updateLocationDetails(
   await gpatch(url, accessToken, body)
 }
 
+export type GbpTimeOfDay = { hours: number; minutes: number }
+export type GbpHoursPeriodInput = {
+  openDay: string; openTime: GbpTimeOfDay; closeDay: string; closeTime: GbpTimeOfDay
+}
+
+// Atualiza os horários regulares (substitui todos). periods vazio = sem horários.
+export async function updateLocationHours(
+  accessToken: string, locationName: string, periods: GbpHoursPeriodInput[],
+): Promise<void> {
+  const url = `${BUSINESS_INFO}/${locationName}?updateMask=regularHours`
+  await gpatch(url, accessToken, { regularHours: { periods } })
+}
+
 // Lista todos os locais de todas as contas do usuário.
 export async function listAllLocations(accessToken: string): Promise<GbpRemoteLocation[]> {
   const accounts = await listAccounts(accessToken)
