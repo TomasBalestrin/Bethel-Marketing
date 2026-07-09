@@ -8,13 +8,14 @@ import {
   type GoogleStatus, type AvailableLocation, type ConnectedLocation,
 } from '@/app/actions/google'
 import { LocationProfilePanel } from '@/components/google/LocationProfilePanel'
+import { RecommendationsPanel } from '@/components/google/RecommendationsPanel'
 
 const MODULOS = [
   { emoji: '🏢', titulo: 'Perfil', desc: 'Ver e editar nome, telefone, site e descrição (categorias e horários em breve)', pronto: true },
   { emoji: '⭐', titulo: 'Avaliações', desc: 'Listar avaliações e responder (com rascunho da IA, você aprova)' },
   { emoji: '📣', titulo: 'Postagens', desc: 'Criar, agendar e publicar postagens no perfil' },
   { emoji: '📈', titulo: 'Desempenho', desc: 'Dashboard mês a mês: impressões, cliques, ligações, rotas' },
-  { emoji: '✨', titulo: 'Recomendações IA', desc: 'Análise do perfil com sugestões priorizadas e acionáveis' },
+  { emoji: '✨', titulo: 'Recomendações IA', desc: 'Análise do perfil com sugestões priorizadas e acionáveis', pronto: true },
   { emoji: '🔍', titulo: 'Concorrentes', desc: 'Comparar dados públicos (nota, nº de avaliações, fotos)' },
 ]
 
@@ -38,6 +39,7 @@ function GoogleInner() {
   const [conectandoLoc, setConectandoLoc] = useState<string | null>(null)
   const [locMsg, setLocMsg] = useState('')
   const [perfilAberto, setPerfilAberto] = useState<string | null>(null)
+  const [recsAberto, setRecsAberto] = useState<string | null>(null)
 
   const connected = params.get('connected') === '1'
   const erro = params.get('erro')
@@ -160,15 +162,20 @@ function GoogleInner() {
                     <p className="text-xs text-gray-500">{[loc.primaryCategory, loc.address].filter(Boolean).join(' • ')}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={() => setPerfilAberto(perfilAberto === loc.id ? null : loc.id)}
+                    <button onClick={() => { setPerfilAberto(perfilAberto === loc.id ? null : loc.id); setRecsAberto(null) }}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100">
                       {perfilAberto === loc.id ? 'Fechar' : '✏️ Ver / editar perfil'}
+                    </button>
+                    <button onClick={() => { setRecsAberto(recsAberto === loc.id ? null : loc.id); setPerfilAberto(null) }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100">
+                      {recsAberto === loc.id ? 'Fechar' : '✨ Recomendações IA'}
                     </button>
                     <button onClick={() => removerLocal(loc.id)}
                       className="text-gray-300 hover:text-red-500 text-sm">🗑️</button>
                   </div>
                 </div>
                 {perfilAberto === loc.id && <LocationProfilePanel id={loc.id} />}
+                {recsAberto === loc.id && <RecommendationsPanel id={loc.id} />}
               </div>
             ))}
 

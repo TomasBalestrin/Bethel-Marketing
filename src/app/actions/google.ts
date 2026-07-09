@@ -9,7 +9,10 @@ import {
   type GbpLocationDetails,
 } from '@/lib/google/business'
 
+import { analyzeProfile } from '@/lib/google/recommendations'
+
 export type { GbpLocationDetails } from '@/lib/google/business'
+export type { GbpRecommendation } from '@/lib/google/recommendations'
 
 type Result<T = void> =
   | { success: true; data: T }
@@ -197,5 +200,25 @@ export async function saveLocationProfile(
   } catch (e) {
     if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Sem permissão para editar este perfil (verifique se você é proprietário/gerente).' }
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar' }
+  }
+}
+
+// ── Recomendações IA ───────────────────────────────────────────────────────────
+
+export async function getLocationRecommendations(id: string): Promise<Result<import('@/lib/google/recommendations').GbpRecommendation[]>> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+    const det = await getLocationDetails(token, row.locationName)
+    const recs = await analyzeProfile(det)
+    if (recs.length === 0) return { success: false, error: 'Não foi possível gerar recomendações agora. Tente novamente.' }
+    return { success: true, data: recs }
+  } catch (e) {
+    if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Acesso à API ainda não aprovado pelo Google.' }
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao gerar recomendações' }
   }
 }
