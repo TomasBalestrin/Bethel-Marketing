@@ -10,9 +10,11 @@ import {
 } from '@/lib/google/business'
 
 import { analyzeProfile } from '@/lib/google/recommendations'
+import { getPerformance } from '@/lib/google/performance'
 
 export type { GbpLocationDetails } from '@/lib/google/business'
 export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
+export type { PerfResult, PerfMetric } from '@/lib/google/performance'
 
 type Result<T = void> =
   | { success: true; data: T }
@@ -222,5 +224,25 @@ export async function getLocationRecommendations(id: string): Promise<Result<imp
   } catch (e) {
     if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Acesso à API ainda não aprovado pelo Google.' }
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao gerar recomendações' }
+  }
+}
+
+// ── Desempenho ─────────────────────────────────────────────────────────────────
+
+export async function getLocationPerformance(id: string): Promise<Result<import('@/lib/google/performance').PerfResult>> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+    const perf = await getPerformance(token, row.locationName)
+    return { success: true, data: perf }
+  } catch (e) {
+    if (e instanceof GoogleApiError && (e.status === 403 || e.status === 404)) {
+      return { success: false, error: 'Ative a Business Profile Performance API no Google Cloud e confirme que o perfil está verificado.' }
+    }
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao carregar desempenho' }
   }
 }
