@@ -40,7 +40,7 @@ export function PerformancePanel({ id }: { id: string }) {
   const totalImpr = perf ? perf.impressionsBreakdown.reduce((a, b) => a + b.value, 0) : 0
 
   return (
-    <div className="mt-3 border-t border-gray-100 pt-3">
+    <div>
       <div className="flex items-center gap-1.5 mb-3 flex-wrap">
         {PERIODOS.map(p => (
           <button key={p.dias} onClick={() => setDias(p.dias)} disabled={carregando}

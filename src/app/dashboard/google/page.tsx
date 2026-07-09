@@ -7,19 +7,24 @@ import {
   listAvailableLocations, connectLocation, listConnectedLocations, removeLocation,
   type GoogleStatus, type AvailableLocation, type ConnectedLocation,
 } from '@/app/actions/google'
+import { Modal } from '@/components/google/Modal'
 import { LocationProfilePanel } from '@/components/google/LocationProfilePanel'
 import { RecommendationsPanel } from '@/components/google/RecommendationsPanel'
 import { PerformancePanel } from '@/components/google/PerformancePanel'
 import { CompetitorsPanel } from '@/components/google/CompetitorsPanel'
 import { ReviewsPanel } from '@/components/google/ReviewsPanel'
 
-const MODULOS = [
-  { emoji: '🏢', titulo: 'Perfil', desc: 'Ver e editar nome, telefone, site e descrição (categorias e horários em breve)', pronto: true },
-  { emoji: '⭐', titulo: 'Avaliações', desc: 'Listar avaliações e responder (com rascunho da IA, você aprova)', pronto: true },
-  { emoji: '📣', titulo: 'Postagens', desc: 'Criar, agendar e publicar postagens no perfil' },
-  { emoji: '📈', titulo: 'Desempenho', desc: 'Visualizações, ligações, rotas, cliques e conversas (30 dias vs. anteriores)', pronto: true },
-  { emoji: '✨', titulo: 'Recomendações IA', desc: 'Análise do perfil com sugestões priorizadas e acionáveis', pronto: true },
-  { emoji: '🔍', titulo: 'Concorrentes', desc: 'Comparar nota e nº de avaliações com concorrentes da sua cidade', pronto: true },
+type FeatureKey = 'perfil' | 'avaliacoes' | 'desempenho' | 'recomendacoes' | 'concorrentes' | 'postagens'
+
+const FEATURES: {
+  key: FeatureKey; emoji: string; titulo: string; desc: string; pronto: boolean; accent: string; hover: string
+}[] = [
+  { key: 'perfil', emoji: '🏢', titulo: 'Perfil', desc: 'Ver e editar nome, telefone, site e descrição', pronto: true, accent: 'bg-blue-50', hover: 'hover:border-blue-200' },
+  { key: 'avaliacoes', emoji: '⭐', titulo: 'Avaliações', desc: 'Listar e responder (com rascunho da IA)', pronto: true, accent: 'bg-amber-50', hover: 'hover:border-amber-200' },
+  { key: 'desempenho', emoji: '📈', titulo: 'Desempenho', desc: 'Visualizações, ligações, rotas e cliques', pronto: true, accent: 'bg-green-50', hover: 'hover:border-green-200' },
+  { key: 'recomendacoes', emoji: '✨', titulo: 'Recomendações IA', desc: 'Análise do perfil com plano de ação', pronto: true, accent: 'bg-purple-50', hover: 'hover:border-purple-200' },
+  { key: 'concorrentes', emoji: '🔍', titulo: 'Concorrentes', desc: 'Compare seu perfil com a concorrência', pronto: true, accent: 'bg-orange-50', hover: 'hover:border-orange-200' },
+  { key: 'postagens', emoji: '📣', titulo: 'Postagens', desc: 'Criar e agendar postagens no perfil', pronto: false, accent: 'bg-gray-100', hover: '' },
 ]
 
 export default function GooglePage() {
@@ -41,18 +46,12 @@ function GoogleInner() {
   const [carregandoLocais, setCarregandoLocais] = useState(false)
   const [conectandoLoc, setConectandoLoc] = useState<string | null>(null)
   const [locMsg, setLocMsg] = useState('')
-  const [perfilAberto, setPerfilAberto] = useState<string | null>(null)
-  const [recsAberto, setRecsAberto] = useState<string | null>(null)
-  const [desempenhoAberto, setDesempenhoAberto] = useState<string | null>(null)
-  const [concorrentesAberto, setConcorrentesAberto] = useState<string | null>(null)
-  const [avaliacoesAberto, setAvaliacoesAberto] = useState<string | null>(null)
 
-  function fecharTodos() {
-    setPerfilAberto(null); setDesempenhoAberto(null); setConcorrentesAberto(null); setRecsAberto(null); setAvaliacoesAberto(null)
-  }
+  const [modal, setModal] = useState<FeatureKey | null>(null)
 
   const connected = params.get('connected') === '1'
   const erro = params.get('erro')
+  const ativo = conectados[0] ?? null
 
   useEffect(() => {
     (async () => {
@@ -75,9 +74,7 @@ function GoogleInner() {
       if (res.success) {
         setDisponiveis(res.data)
         if (res.data.length === 0) setLocMsg('Nenhum local encontrado nessa conta Google.')
-      } else {
-        setLocMsg(res.error)
-      }
+      } else setLocMsg(res.error)
     } finally { setCarregandoLocais(false) }
   }
 
@@ -93,10 +90,11 @@ function GoogleInner() {
     } finally { setConectandoLoc(null) }
   }
 
-  async function removerLocal(id: string) {
-    if (!confirm('Remover este perfil?')) return
-    const res = await removeLocation(id)
-    if (res.success) setConectados(prev => prev.filter(c => c.id !== id))
+  async function trocarPerfil() {
+    if (!ativo) return
+    if (!confirm('Trocar de perfil? Você poderá escolher outro do Google.')) return
+    const res = await removeLocation(ativo.id)
+    if (res.success) { setConectados([]); setDisponiveis(null) }
     else alert(res.error)
   }
 
@@ -107,17 +105,21 @@ function GoogleInner() {
       await disconnectGoogle()
       const res = await getGoogleStatus()
       if (res.success) setStatus(res.data)
+      setConectados([])
     } finally { setDesconectando(false) }
   }
+
+  const feature = FEATURES.find(f => f.key === modal)
 
   return (
     <div className="py-8 px-6">
       <div className="max-w-4xl mx-auto">
+        {/* Cabeçalho */}
         <div className="mb-6 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center text-xl flex-shrink-0">📍</div>
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center text-xl flex-shrink-0 shadow-sm">📍</div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Google Meu Negócio</h1>
-            <p className="text-sm text-gray-500">Gestão e análise do Perfil da Empresa no Google</p>
+            <p className="text-sm text-gray-500">Gestão e crescimento do Perfil da Empresa no Google</p>
           </div>
         </div>
 
@@ -125,134 +127,121 @@ function GoogleInner() {
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4 text-sm text-green-700">✅ Conta do Google conectada com sucesso!</div>
         )}
         {erro === 'nao_configurado' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-700">⚠️ A integração com o Google ainda não foi configurada no servidor (credenciais pendentes).</div>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-700">⚠️ A integração com o Google ainda não foi configurada no servidor.</div>
         )}
         {erro && erro !== 'nao_configurado' && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-sm text-red-700">❌ Não foi possível concluir a conexão ({erro}). Tente novamente.</div>
         )}
 
         {carregando ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-12 text-center text-gray-400 text-sm">Carregando...</div>
+          <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center text-gray-400 text-sm">Carregando...</div>
         ) : !status?.configured ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-8 space-y-3">
+          <div className="bg-white border border-gray-200 rounded-2xl p-8 space-y-3">
             <p className="font-semibold text-gray-900">Integração em preparação</p>
             <p className="text-sm text-gray-600 leading-relaxed">
-              A estrutura já está pronta, mas a conexão com o Google depende da liberação de acesso à <b>Business Profile API</b> pelo Google (projeto no Google Cloud, solicitação de acesso e verificação do app — pode levar semanas).
-              Assim que as credenciais estiverem configuradas, o botão de conexão aparece aqui.
+              A conexão com o Google depende da liberação de acesso à <b>Business Profile API</b>. Assim que as credenciais estiverem configuradas, o botão de conexão aparece aqui.
             </p>
           </div>
         ) : !status.connected ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center space-y-4">
-            <p className="font-semibold text-gray-900">Conecte a conta do Google do negócio</p>
-            <p className="text-sm text-gray-600">Você será levado ao Google para autorizar o acesso ao perfil da empresa.</p>
+          <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-green-500 grid place-items-center text-2xl mx-auto shadow-sm">🔗</div>
+            <div>
+              <p className="font-semibold text-gray-900">Conecte a conta do Google do negócio</p>
+              <p className="text-sm text-gray-500 mt-1">Você será levado ao Google para autorizar o acesso ao perfil da empresa.</p>
+            </div>
             <a href="/api/google/oauth/start"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 transition-all">
-              🔗 Conectar com Google
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 transition-all shadow-sm">
+              Conectar com Google
             </a>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+        ) : !ativo ? (
+          /* Conectado no Google, mas sem perfil escolhido ainda */
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-900">✅ Conta Google conectada</p>
-                <p className="text-xs text-gray-500">{conectados.length} perfil(is) conectado(s)</p>
+                <p className="text-sm font-semibold text-gray-900">Escolha o perfil da empresa</p>
+                <p className="text-xs text-gray-500">Selecione o Perfil de Empresa que você quer gerenciar.</p>
               </div>
-              <button onClick={desconectar} disabled={desconectando}
-                className="px-3 py-1.5 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all disabled:opacity-50">
-                {desconectando ? '...' : 'Desconectar'}
+              <button onClick={carregarDisponiveis} disabled={carregandoLocais}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 disabled:opacity-50">
+                {carregandoLocais ? '⏳ Buscando...' : '🔄 Buscar perfis'}
               </button>
             </div>
-
-            {/* Perfis conectados */}
-            {conectados.map(loc => (
-              <div key={loc.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">🏢 {loc.title}</p>
-                    <p className="text-xs text-gray-500">{[loc.primaryCategory, loc.address].filter(Boolean).join(' • ')}</p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                    <button onClick={() => { const o = perfilAberto === loc.id; fecharTodos(); if (!o) setPerfilAberto(loc.id) }}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100">
-                      {perfilAberto === loc.id ? 'Fechar' : '✏️ Ver / editar perfil'}
-                    </button>
-                    <button onClick={() => { const o = desempenhoAberto === loc.id; fecharTodos(); if (!o) setDesempenhoAberto(loc.id) }}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-green-200 text-green-700 bg-green-50 hover:bg-green-100">
-                      {desempenhoAberto === loc.id ? 'Fechar' : '📈 Desempenho'}
-                    </button>
-                    <button onClick={() => { const o = avaliacoesAberto === loc.id; fecharTodos(); if (!o) setAvaliacoesAberto(loc.id) }}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100">
-                      {avaliacoesAberto === loc.id ? 'Fechar' : '⭐ Avaliações'}
-                    </button>
-                    <button onClick={() => { const o = concorrentesAberto === loc.id; fecharTodos(); if (!o) setConcorrentesAberto(loc.id) }}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100">
-                      {concorrentesAberto === loc.id ? 'Fechar' : '🔍 Concorrentes'}
-                    </button>
-                    <button onClick={() => { const o = recsAberto === loc.id; fecharTodos(); if (!o) setRecsAberto(loc.id) }}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100">
-                      {recsAberto === loc.id ? 'Fechar' : '✨ Recomendações IA'}
-                    </button>
-                    <button onClick={() => removerLocal(loc.id)}
-                      className="text-gray-300 hover:text-red-500 text-sm">🗑️</button>
-                  </div>
-                </div>
-                {perfilAberto === loc.id && <LocationProfilePanel id={loc.id} />}
-                {desempenhoAberto === loc.id && <PerformancePanel id={loc.id} />}
-                {avaliacoesAberto === loc.id && <ReviewsPanel id={loc.id} />}
-                {concorrentesAberto === loc.id && <CompetitorsPanel id={loc.id} />}
-                {recsAberto === loc.id && <RecommendationsPanel id={loc.id} />}
-              </div>
-            ))}
-
-            {/* Selecionar/adicionar perfil */}
-            <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-700">{conectados.length ? 'Adicionar outro perfil' : 'Conecte um perfil do Google'}</p>
-                <button onClick={carregarDisponiveis} disabled={carregandoLocais}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 disabled:opacity-50">
-                  {carregandoLocais ? '⏳ Buscando...' : '🔄 Buscar perfis'}
-                </button>
-              </div>
-
-              {locMsg && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">{locMsg}</p>}
-
-              {disponiveis && disponiveis.length > 0 && (
-                <div className="space-y-1.5">
-                  {disponiveis.map(d => (
-                    <div key={d.locationName} className="flex items-center justify-between gap-3 border border-gray-100 rounded-lg px-3 py-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">{d.title}</p>
-                        <p className="text-xs text-gray-400 truncate">{[d.primaryCategory, d.address].filter(Boolean).join(' • ')}</p>
-                      </div>
-                      <button onClick={() => conectarLocal(d.locationName)} disabled={conectandoLoc === d.locationName}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 flex-shrink-0">
-                        {conectandoLoc === d.locationName ? '⏳' : 'Conectar'}
-                      </button>
+            {locMsg && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">{locMsg}</p>}
+            {disponiveis && disponiveis.length > 0 && (
+              <div className="space-y-1.5">
+                {disponiveis.map(d => (
+                  <div key={d.locationName} className="flex items-center justify-between gap-3 border border-gray-100 rounded-lg px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{d.title}</p>
+                      <p className="text-xs text-gray-400 truncate">{[d.primaryCategory, d.address].filter(Boolean).join(' • ')}</p>
                     </div>
-                  ))}
+                    <button onClick={() => conectarLocal(d.locationName)} disabled={conectandoLoc === d.locationName}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 flex-shrink-0">
+                      {conectandoLoc === d.locationName ? '⏳' : 'Selecionar'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={desconectar} disabled={desconectando}
+              className="text-xs text-gray-400 hover:text-red-600">{desconectando ? '...' : 'Desconectar conta Google'}</button>
+          </div>
+        ) : (
+          /* Painel principal: perfil ativo + grid de funcionalidades */
+          <div className="space-y-5">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-green-500 grid place-items-center text-xl flex-shrink-0">🏢</div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-base font-bold text-gray-900 truncate">{ativo.title}</p>
+                  <span className="text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 flex-shrink-0">Conectado</span>
                 </div>
-              )}
+                <p className="text-xs text-gray-500 truncate">{[ativo.primaryCategory, ativo.address].filter(Boolean).join(' • ') || 'Perfil do Google'}</p>
+              </div>
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                <button onClick={trocarPerfil} className="text-[11px] text-gray-400 hover:text-gray-700">Trocar perfil</button>
+                <button onClick={desconectar} disabled={desconectando} className="text-[11px] text-gray-400 hover:text-red-600">{desconectando ? '...' : 'Desconectar'}</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {FEATURES.map(f => (
+                <button key={f.key} disabled={!f.pronto}
+                  onClick={() => f.pronto && setModal(f.key)}
+                  className={`group text-left bg-white border border-gray-200 rounded-2xl p-5 flex items-start gap-3 transition-all ${
+                    f.pronto ? `${f.hover} hover:shadow-md hover:-translate-y-0.5 cursor-pointer` : 'opacity-60 cursor-default'
+                  }`}>
+                  <div className={`w-11 h-11 rounded-xl grid place-items-center text-xl flex-shrink-0 ${f.accent}`}>{f.emoji}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900">{f.titulo}</h3>
+                      {!f.pronto && <span className="text-[10px] font-medium text-gray-400">em breve</span>}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{f.desc}</p>
+                  </div>
+                  {f.pronto && <span className="text-gray-300 group-hover:text-gray-500 transition-colors self-center">→</span>}
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Visão geral dos módulos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
-          {MODULOS.map(m => (
-            <div key={m.titulo} className={`bg-white border rounded-xl p-4 flex items-start gap-3 ${m.pronto ? 'border-green-200' : 'border-gray-200 opacity-80'}`}>
-              <span className="text-xl">{m.emoji}</span>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  {m.titulo}{' '}
-                  <span className={`text-[10px] font-medium align-middle ${m.pronto ? 'text-green-600' : 'text-gray-400'}`}>
-                    {m.pronto ? '✅ ativo' : 'em breve'}
-                  </span>
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{m.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Modal da funcionalidade */}
+        <Modal
+          open={modal !== null && ativo !== null}
+          onClose={() => setModal(null)}
+          title={feature?.titulo ?? ''}
+          subtitle={ativo?.title}
+          icon={feature?.emoji}
+          accent={feature?.accent}
+        >
+          {ativo && modal === 'perfil' && <LocationProfilePanel id={ativo.id} />}
+          {ativo && modal === 'avaliacoes' && <ReviewsPanel id={ativo.id} />}
+          {ativo && modal === 'desempenho' && <PerformancePanel id={ativo.id} />}
+          {ativo && modal === 'recomendacoes' && <RecommendationsPanel id={ativo.id} />}
+          {ativo && modal === 'concorrentes' && <CompetitorsPanel id={ativo.id} />}
+        </Modal>
       </div>
     </div>
   )

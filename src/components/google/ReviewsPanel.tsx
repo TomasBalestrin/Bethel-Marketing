@@ -104,7 +104,7 @@ export function ReviewsPanel({ id }: { id: string }) {
   }
 
   return (
-    <div className="mt-3 border-t border-gray-100 pt-3">
+    <div>
       {carregando && (
         <div className="text-xs text-gray-500 py-4 flex items-center gap-2">
           <span className="inline-block w-3.5 h-3.5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
