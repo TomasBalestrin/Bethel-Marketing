@@ -13,18 +13,26 @@ function Delta({ pct }: { pct: number | null }) {
   return <span className={`text-[11px] font-semibold ${cls}`}>{arrow} {Math.abs(pct).toFixed(0)}%</span>
 }
 
+const PERIODOS: { dias: number; label: string }[] = [
+  { dias: 7, label: '7 dias' },
+  { dias: 30, label: '30 dias' },
+  { dias: 90, label: '90 dias' },
+  { dias: 180, label: '180 dias' },
+]
+
 export function PerformancePanel({ id }: { id: string }) {
   const [perf, setPerf] = useState<PerfResult | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
+  const [dias, setDias] = useState(30)
 
   const carregar = useCallback(async () => {
     setCarregando(true); setErro(''); setPerf(null)
-    const res = await getLocationPerformance(id)
+    const res = await getLocationPerformance(id, dias)
     if (res.success) setPerf(res.data)
     else setErro(res.error)
     setCarregando(false)
-  }, [id])
+  }, [id, dias])
 
   useEffect(() => { carregar() }, [carregar])
 
@@ -33,6 +41,19 @@ export function PerformancePanel({ id }: { id: string }) {
 
   return (
     <div className="mt-3 border-t border-gray-100 pt-3">
+      <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+        {PERIODOS.map(p => (
+          <button key={p.dias} onClick={() => setDias(p.dias)} disabled={carregando}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors disabled:opacity-50 ${
+              dias === p.dias
+                ? 'bg-green-600 text-white border-green-600'
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            }`}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {carregando && (
         <div className="text-xs text-gray-500 py-4 flex items-center gap-2">
           <span className="inline-block w-3.5 h-3.5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
@@ -44,7 +65,7 @@ export function PerformancePanel({ id }: { id: string }) {
 
       {perf && (
         <div className="space-y-3">
-          <p className="text-[11px] text-gray-400">Últimos 30 dias vs. 30 dias anteriores (dados do Google têm ~2-3 dias de atraso).</p>
+          <p className="text-[11px] text-gray-400">Últimos {perf.days} dias vs. {perf.days} dias anteriores (dados do Google têm ~2-3 dias de atraso).</p>
 
           {perf.semDados ? (
             <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">

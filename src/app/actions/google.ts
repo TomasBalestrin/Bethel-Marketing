@@ -229,7 +229,7 @@ export async function getLocationRecommendations(id: string): Promise<Result<imp
 
 // ── Desempenho ─────────────────────────────────────────────────────────────────
 
-export async function getLocationPerformance(id: string): Promise<Result<import('@/lib/google/performance').PerfResult>> {
+export async function getLocationPerformance(id: string, days = 30): Promise<Result<import('@/lib/google/performance').PerfResult>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
@@ -237,7 +237,7 @@ export async function getLocationPerformance(id: string): Promise<Result<import(
     if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
     const token = await getValidAccessToken(dbUser.id)
     if (!token) return { success: false, error: 'Conta Google não conectada' }
-    const perf = await getPerformance(token, row.locationName)
+    const perf = await getPerformance(token, row.locationName, days)
     return { success: true, data: perf }
   } catch (e) {
     if (e instanceof GoogleApiError && (e.status === 403 || e.status === 404)) {

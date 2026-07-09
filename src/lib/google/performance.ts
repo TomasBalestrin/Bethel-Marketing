@@ -33,20 +33,26 @@ async function gget(url: string, accessToken: string) {
 function gdDate(d: Date): number { return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate() }
 function gdObj(o: Record<string, unknown>): number { return Number(o.year) * 10000 + Number(o.month) * 100 + Number(o.day) }
 
+export const PERIODOS_VALIDOS = [7, 30, 90, 180] as const
+
 export type PerfMetric = { key: string; label: string; core: boolean; total: number; prev: number; deltaPct: number | null }
 export type PerfResult = {
+  days: number
   metrics: PerfMetric[]
   impressionsBreakdown: { label: string; value: number }[]
   semDados: boolean
 }
 
-export async function getPerformance(accessToken: string, locationName: string): Promise<PerfResult> {
+export async function getPerformance(accessToken: string, locationName: string, days = 30): Promise<PerfResult> {
+  // aceita só os períodos suportados (a Performance API tem ~18 meses de histórico)
+  const janela = (PERIODOS_VALIDOS as readonly number[]).includes(days) ? days : 30
+
   const now = Date.now()
   const lastEnd = gdDate(new Date(now - LAG * DAY))
-  const lastStart = gdDate(new Date(now - (LAG + 30) * DAY))
-  const prevStart = gdDate(new Date(now - (LAG + 60) * DAY))
+  const lastStart = gdDate(new Date(now - (LAG + janela) * DAY))
+  const prevStart = gdDate(new Date(now - (LAG + 2 * janela) * DAY))
 
-  const reqStart = new Date(now - (LAG + 60) * DAY)
+  const reqStart = new Date(now - (LAG + 2 * janela) * DAY)
   const reqEnd = new Date(now) // pede até hoje (dias sem dado simplesmente não vêm)
   const params = new URLSearchParams()
   for (const m of ALL_METRICS) params.append('dailyMetrics', m)
@@ -104,5 +110,5 @@ export async function getPerformance(accessToken: string, locationName: string):
     { label: 'Mapas (Maps)', value: sumOf(['BUSINESS_IMPRESSIONS_DESKTOP_MAPS', 'BUSINESS_IMPRESSIONS_MOBILE_MAPS'], sumLast) },
   ]
 
-  return { metrics, impressionsBreakdown, semDados: !anyData }
+  return { days: janela, metrics, impressionsBreakdown, semDados: !anyData }
 }
