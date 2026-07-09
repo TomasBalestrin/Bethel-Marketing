@@ -85,6 +85,8 @@ export async function listLocations(accessToken: string, accountName: string): P
 
 // ── Detalhes completos + edição de um local ───────────────────────────────────
 
+export type GbpCategory = { name: string; displayName: string }
+
 export type GbpHoursPeriod = {
   openDay: string       // ex: "MONDAY"
   openTime: string      // "HH:MM"
@@ -97,6 +99,8 @@ export type GbpLocationDetails = {
   title: string
   primaryCategory: string | null
   additionalCategories: string[]
+  primaryCategoryName: string | null              // gcid da categoria principal
+  additionalCategoriesFull: GbpCategory[]          // { name(gcid), displayName }
   address: string | null
   city: string | null
   lat: number | null
@@ -139,6 +143,10 @@ export async function getLocationDetails(accessToken: string, locationName: stri
     title: String(l.title ?? ''),
     primaryCategory: primary?.displayName ? String(primary.displayName) : null,
     additionalCategories: additional.map(c => String(c.displayName ?? '')).filter(Boolean),
+    primaryCategoryName: primary?.name ? String(primary.name) : null,
+    additionalCategoriesFull: additional
+      .map(c => ({ name: String(c.name ?? ''), displayName: String(c.displayName ?? '') }))
+      .filter(c => c.name && c.displayName),
     address: formatAddress(addr),
     city: addr?.locality ? String(addr.locality) : null,
     lat: latlng?.latitude != null ? Number(latlng.latitude) : null,
@@ -193,6 +201,51 @@ export async function updateLocationHours(
 ): Promise<void> {
   const url = `${BUSINESS_INFO}/${locationName}?updateMask=regularHours`
   await gpatch(url, accessToken, { regularHours: { periods } })
+}
+
+// ── Categorias ─────────────────────────────────────────────────────────────────
+
+// Cache em memória da lista de categorias (BR). A API não tem busca por substring,
+// então baixamos a lista uma vez e filtramos localmente.
+let CAT_CACHE: GbpCategory[] | null = null
+let CAT_AT = 0
+
+async function loadCategories(accessToken: string): Promise<GbpCategory[]> {
+  if (CAT_CACHE && Date.now() - CAT_AT < 24 * 3600e3) return CAT_CACHE
+  const out: GbpCategory[] = []
+  let pageToken = ''
+  for (let i = 0; i < 12; i++) {
+    const url = `${BUSINESS_INFO}/categories?regionCode=BR&languageCode=pt-BR&view=BASIC&pageSize=1000${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`
+    const data = (await gget(url, accessToken)) as Record<string, unknown>
+    const cats = Array.isArray(data.categories) ? (data.categories as Record<string, unknown>[]) : []
+    for (const c of cats) if (c.name && c.displayName) out.push({ name: String(c.name), displayName: String(c.displayName) })
+    pageToken = data.nextPageToken ? String(data.nextPageToken) : ''
+    if (!pageToken) break
+  }
+  CAT_CACHE = out; CAT_AT = Date.now()
+  return out
+}
+
+const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+export async function searchCategories(accessToken: string, term: string): Promise<GbpCategory[]> {
+  const t = norm(term.trim())
+  if (t.length < 2) return []
+  const all = await loadCategories(accessToken)
+  return all.filter(c => norm(c.displayName).includes(t)).slice(0, 15)
+}
+
+// Atualiza categorias (substitui). primaryName obrigatório; additionalNames opcional.
+export async function updateLocationCategories(
+  accessToken: string, locationName: string, primaryName: string, additionalNames: string[],
+): Promise<void> {
+  const url = `${BUSINESS_INFO}/${locationName}?updateMask=categories`
+  await gpatch(url, accessToken, {
+    categories: {
+      primaryCategory: { name: primaryName },
+      additionalCategories: additionalNames.filter(Boolean).map(n => ({ name: n })),
+    },
+  })
 }
 
 export type GbpAddressInput = {

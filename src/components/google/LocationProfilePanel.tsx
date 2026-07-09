@@ -1,7 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getLocationProfile, saveLocationProfile, saveLocationHours, saveLocationAddress, type GbpLocationDetails } from '@/app/actions/google'
+import {
+  getLocationProfile, saveLocationProfile, saveLocationHours, saveLocationAddress,
+  buscarCategorias, saveLocationCategories,
+  type GbpLocationDetails, type GbpCategory,
+} from '@/app/actions/google'
 
 const DIAS: Record<string, string> = {
   MONDAY: 'Segunda', TUESDAY: 'Terça', WEDNESDAY: 'Quarta', THURSDAY: 'Quinta',
@@ -151,6 +155,108 @@ function AddressEditor({ id, det }: { id: string; det: GbpLocationDetails }) {
   )
 }
 
+// ── Editor de categorias ───────────────────────────────────────────────────────
+
+function CategoriesEditor({ id, det }: { id: string; det: GbpLocationDetails }) {
+  const [primary, setPrimary] = useState<GbpCategory | null>(
+    det.primaryCategoryName && det.primaryCategory ? { name: det.primaryCategoryName, displayName: det.primaryCategory } : null,
+  )
+  const [adicionais, setAdicionais] = useState<GbpCategory[]>(det.additionalCategoriesFull)
+  const [term, setTerm] = useState('')
+  const [resultados, setResultados] = useState<GbpCategory[]>([])
+  const [buscando, setBuscando] = useState(false)
+  const [pickPrimary, setPickPrimary] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  useEffect(() => {
+    if (term.trim().length < 2) { setResultados([]); return }
+    const h = setTimeout(async () => {
+      setBuscando(true)
+      const res = await buscarCategorias(term)
+      if (res.success) setResultados(res.data)
+      setBuscando(false)
+    }, 400)
+    return () => clearTimeout(h)
+  }, [term])
+
+  function escolher(cat: GbpCategory) {
+    if (pickPrimary) {
+      setAdicionais(prev => {
+        const withOld = primary && primary.name !== cat.name ? [primary, ...prev] : prev
+        return withOld.filter(c => c.name !== cat.name)
+      })
+      setPrimary(cat)
+      setPickPrimary(false)
+    } else {
+      if (cat.name === primary?.name) return
+      setAdicionais(prev => (prev.some(c => c.name === cat.name) ? prev : [...prev, cat]))
+    }
+    setTerm(''); setResultados([])
+  }
+
+  async function salvar() {
+    if (!primary) { setMsg('Selecione a categoria principal.'); return }
+    setSalvando(true); setMsg('')
+    const res = await saveLocationCategories(id, primary.name, adicionais.map(c => c.name))
+    setMsg(res.success ? '✅ Categorias salvas! Pode levar alguns minutos para refletir.' : '❌ ' + res.error)
+    setSalvando(false)
+  }
+
+  const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300'
+
+  return (
+    <div className="space-y-3">
+      {/* Principal */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] text-gray-400">Principal:</span>
+        <span className="text-sm font-medium text-gray-800">{primary?.displayName ?? '(nenhuma)'}</span>
+        <button type="button" onClick={() => { setPickPrimary(true); setTerm('') }}
+          className="text-[11px] text-blue-600 hover:underline">trocar</button>
+      </div>
+
+      {/* Adicionais */}
+      {adicionais.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {adicionais.map(c => (
+            <span key={c.name} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 rounded-full px-2.5 py-1">
+              {c.displayName}
+              <button type="button" onClick={() => setAdicionais(prev => prev.filter(x => x.name !== c.name))}
+                className="text-gray-400 hover:text-red-500">✕</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Busca */}
+      <div className="relative">
+        <input className={input} value={term} onChange={e => setTerm(e.target.value)}
+          placeholder={pickPrimary ? 'Buscar categoria PRINCIPAL...' : 'Adicionar categoria (ex: Restaurante)'} />
+        {(buscando || resultados.length > 0) && (
+          <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+            {buscando && <p className="text-xs text-gray-400 px-3 py-2">Buscando... (a 1ª busca pode demorar alguns segundos)</p>}
+            {!buscando && resultados.map(c => (
+              <button key={c.name} type="button" onClick={() => escolher(c)}
+                className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50">
+                {c.displayName}
+              </button>
+            ))}
+          </div>
+        )}
+        {pickPrimary && <button type="button" onClick={() => setPickPrimary(false)} className="text-[11px] text-gray-400 hover:underline mt-1">cancelar troca de principal</button>}
+      </div>
+
+      {msg && <p className="text-xs bg-gray-50 border border-gray-200 rounded-lg p-2">{msg}</p>}
+      <div className="flex justify-end">
+        <button onClick={salvar} disabled={salvando}
+          className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 disabled:opacity-40">
+          {salvando ? 'Salvando...' : 'Salvar categorias'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Painel do perfil ───────────────────────────────────────────────────────────
 
 export function LocationProfilePanel({ id }: { id: string }) {
@@ -245,19 +351,16 @@ export function LocationProfilePanel({ id }: { id: string }) {
         <HoursEditor id={id} initial={det.regularHours} />
       </div>
 
+      {/* Categorias */}
+      <div>
+        <label className={label}>Categorias</label>
+        <CategoriesEditor id={id} det={det} />
+      </div>
+
       {/* Endereço */}
       <div>
         <label className={label}>Endereço</label>
         <AddressEditor id={id} det={det} />
-      </div>
-
-      {/* Somente leitura */}
-      <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-xs text-gray-600">
-        {det.primaryCategory && <p><span className="text-gray-400">Categoria principal:</span> {det.primaryCategory}</p>}
-        {det.additionalCategories.length > 0 && (
-          <p><span className="text-gray-400">Outras categorias:</span> {det.additionalCategories.join(', ')}</p>
-        )}
-        <p className="text-[10px] text-gray-400 pt-1">Categorias e serviços serão editáveis em breve.</p>
       </div>
     </div>
   )

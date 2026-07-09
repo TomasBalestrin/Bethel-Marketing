@@ -5,8 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { googleConfigured } from '@/lib/google/oauth'
 import { getValidAccessToken } from '@/lib/google/tokens'
 import {
-  listAllLocations, getLocationDetails, updateLocationDetails, updateLocationHours, updateLocationAddress, GoogleApiError,
-  type GbpLocationDetails,
+  listAllLocations, getLocationDetails, updateLocationDetails, updateLocationHours, updateLocationAddress,
+  searchCategories, updateLocationCategories, GoogleApiError,
+  type GbpLocationDetails, type GbpCategory,
 } from '@/lib/google/business'
 
 import { analyzeProfile } from '@/lib/google/recommendations'
@@ -14,7 +15,7 @@ import { getPerformance } from '@/lib/google/performance'
 import { placesConfigured, getPlaceById, searchCompetitors, type Competitor } from '@/lib/google/competitors'
 import { listReviews, replyToReview, draftReply } from '@/lib/google/reviews'
 
-export type { GbpLocationDetails } from '@/lib/google/business'
+export type { GbpLocationDetails, GbpCategory } from '@/lib/google/business'
 export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
 export type { PerfResult, PerfMetric } from '@/lib/google/performance'
 export type { GbpReview, ReviewsResult } from '@/lib/google/reviews'
@@ -236,6 +237,38 @@ export async function saveLocationHours(
   } catch (e) {
     if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Sem permissão para editar este perfil (verifique se você é proprietário/gerente).' }
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar horários' }
+  }
+}
+
+export async function buscarCategorias(term: string): Promise<Result<GbpCategory[]>> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+    const cats = await searchCategories(token, term)
+    return { success: true, data: cats }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao buscar categorias' }
+  }
+}
+
+export async function saveLocationCategories(
+  id: string, primaryName: string, additionalNames: string[],
+): Promise<Result> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+    if (!primaryName) return { success: false, error: 'Selecione uma categoria principal.' }
+    await updateLocationCategories(token, row.locationName, primaryName, additionalNames.slice(0, 9))
+    return { success: true, data: undefined }
+  } catch (e) {
+    if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Sem permissão para editar este perfil (verifique se você é proprietário/gerente).' }
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao salvar categorias' }
   }
 }
 
