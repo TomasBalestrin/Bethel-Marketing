@@ -279,15 +279,15 @@ export async function getLocationCompetitors(id: string): Promise<Result<Competi
 
     const encontrados = await searchCompetitors({ category: categoria, city: cidade, lat: det.lat, lng: det.lng })
 
-    // próprio negócio (por placeId, se tivermos)
-    let self: Competitor | null = row.placeId
-      ? encontrados.find(c => c.placeId === row.placeId) ?? await getPlaceById(row.placeId)
-      : null
-    if (self) self = { ...self, isSelf: true }
-
-    // lista = concorrentes (sem o próprio) + o próprio; a ordenação é feita no cliente
-    const outros = encontrados.filter(c => !(row.placeId && c.placeId === row.placeId))
-    const lista = [...outros, ...(self ? [self] : [])].slice(0, 20)
+    // mantém a ORDEM do Google (relevância/ranking da busca); marca o próprio negócio
+    const lista = encontrados.slice(0, 20).map(c =>
+      row.placeId && c.placeId === row.placeId ? { ...c, isSelf: true } : c
+    )
+    let self: Competitor | null = lista.find(c => c.isSelf) ?? null
+    if (!self && row.placeId) {
+      const fetched = await getPlaceById(row.placeId)
+      if (fetched) self = { ...fetched, isSelf: true }
+    }
 
     return { success: true, data: { self, lista, categoria, cidade } }
   } catch (e) {
