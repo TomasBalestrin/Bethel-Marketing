@@ -12,7 +12,7 @@ import {
 import { analyzeProfile } from '@/lib/google/recommendations'
 
 export type { GbpLocationDetails } from '@/lib/google/business'
-export type { GbpRecommendation } from '@/lib/google/recommendations'
+export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
 
 type Result<T = void> =
   | { success: true; data: T }
@@ -205,7 +205,7 @@ export async function saveLocationProfile(
 
 // ── Recomendações IA ───────────────────────────────────────────────────────────
 
-export async function getLocationRecommendations(id: string): Promise<Result<import('@/lib/google/recommendations').GbpRecommendation[]>> {
+export async function getLocationRecommendations(id: string): Promise<Result<import('@/lib/google/recommendations').GbpAnalysis>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
@@ -214,9 +214,11 @@ export async function getLocationRecommendations(id: string): Promise<Result<imp
     const token = await getValidAccessToken(dbUser.id)
     if (!token) return { success: false, error: 'Conta Google não conectada' }
     const det = await getLocationDetails(token, row.locationName)
-    const recs = await analyzeProfile(det)
-    if (recs.length === 0) return { success: false, error: 'Não foi possível gerar recomendações agora. Tente novamente.' }
-    return { success: true, data: recs }
+    const analise = await analyzeProfile(det)
+    if (analise.recomendacoes.length === 0 && analise.rotina.length === 0) {
+      return { success: false, error: 'Não foi possível gerar recomendações agora. Tente novamente.' }
+    }
+    return { success: true, data: analise }
   } catch (e) {
     if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Acesso à API ainda não aprovado pelo Google.' }
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao gerar recomendações' }
