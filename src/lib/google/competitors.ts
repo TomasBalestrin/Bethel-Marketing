@@ -13,8 +13,26 @@ export type Competitor = {
   rating: number | null
   reviews: number
   fotos: number
+  temSite: boolean
+  temTelefone: boolean
+  temHorarios: boolean
+  temDescricao: boolean
+  score: number        // 0-100, otimização do perfil pelos sinais públicos
   address: string | null
   isSelf?: boolean
+}
+
+// Score de otimização (0-100) a partir dos sinais públicos da Places API.
+function scoreOf(c: Omit<Competitor, 'score'>): number {
+  let s = 0
+  s += ((c.rating ?? 0) / 5) * 25                                   // nota: até 25
+  s += Math.min(1, Math.log10(c.reviews + 1) / Math.log10(201)) * 30 // avaliações (log, ~200 = cheio): até 30
+  if (c.temSite) s += 12
+  if (c.temTelefone) s += 8
+  if (c.temHorarios) s += 10
+  s += (Math.min(c.fotos, 10) / 10) * 10                            // fotos (amostra): até 10
+  if (c.temDescricao) s += 5
+  return Math.round(s)
 }
 
 async function placesFetch(path: string, fieldMask: string, init?: RequestInit) {
@@ -39,18 +57,25 @@ async function placesFetch(path: string, fieldMask: string, init?: RequestInit) 
 function mapPlace(p: Record<string, unknown>): Competitor {
   const dn = p.displayName as Record<string, unknown> | undefined
   const photos = Array.isArray(p.photos) ? (p.photos as unknown[]) : []
-  return {
+  const editorial = p.editorialSummary as Record<string, unknown> | undefined
+  const base = {
     placeId: p.id ? String(p.id) : null,
     name: dn?.text ? String(dn.text) : '(sem nome)',
     rating: typeof p.rating === 'number' ? (p.rating as number) : null,
     reviews: Number(p.userRatingCount ?? 0),
     fotos: photos.length,
+    temSite: Boolean(p.websiteUri),
+    temTelefone: Boolean(p.nationalPhoneNumber),
+    temHorarios: Boolean(p.regularOpeningHours),
+    temDescricao: Boolean(editorial?.text),
     address: p.formattedAddress ? String(p.formattedAddress) : null,
   }
+  return { ...base, score: scoreOf(base) }
 }
 
-const FIELDS = 'places.id,places.displayName,places.rating,places.userRatingCount,places.formattedAddress,places.photos'
-const FIELDS_ONE = 'id,displayName,rating,userRatingCount,formattedAddress,photos'
+const BASE_FIELDS = 'id,displayName,rating,userRatingCount,formattedAddress,photos,websiteUri,nationalPhoneNumber,regularOpeningHours,editorialSummary'
+const FIELDS = BASE_FIELDS.split(',').map(f => `places.${f}`).join(',')
+const FIELDS_ONE = BASE_FIELDS
 
 export async function getPlaceById(placeId: string): Promise<Competitor | null> {
   try {

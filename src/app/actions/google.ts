@@ -252,9 +252,7 @@ export async function getLocationPerformance(id: string, days = 30): Promise<Res
 
 export type CompetitorsResult = {
   self: Competitor | null
-  ranking: Competitor[]   // inclui o próprio negócio, ordenado por nº de avaliações
-  posicao: number | null  // posição (1-based) do próprio negócio no ranking
-  total: number
+  lista: Competitor[]     // todos (inclui o próprio, se localizado); ordenação é no cliente
   categoria: string
   cidade: string
 }
@@ -285,14 +283,11 @@ export async function getLocationCompetitors(id: string): Promise<Result<Competi
       : null
     if (self) self = { ...self, isSelf: true }
 
-    // ranking = concorrentes (sem o próprio) + o próprio, por nº de avaliações
+    // lista = concorrentes (sem o próprio) + o próprio; a ordenação é feita no cliente
     const outros = encontrados.filter(c => !(row.placeId && c.placeId === row.placeId))
-    const ranking = [...outros, ...(self ? [self] : [])]
-      .sort((a, b) => b.reviews - a.reviews || (b.rating ?? 0) - (a.rating ?? 0))
-      .slice(0, 15)
-    const posicao = self ? ranking.findIndex(c => c.isSelf) + 1 : null
+    const lista = [...outros, ...(self ? [self] : [])].slice(0, 20)
 
-    return { success: true, data: { self, ranking, posicao: posicao && posicao > 0 ? posicao : null, total: ranking.length, categoria, cidade } }
+    return { success: true, data: { self, lista, categoria, cidade } }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao buscar concorrentes' }
   }
