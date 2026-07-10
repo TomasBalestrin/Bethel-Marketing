@@ -86,6 +86,7 @@ export async function listLocations(accessToken: string, accountName: string): P
 // ── Detalhes completos + edição de um local ───────────────────────────────────
 
 export type GbpCategory = { name: string; displayName: string }
+export type GbpServiceItem = { displayName: string; description: string }
 
 export type GbpHoursPeriod = {
   openDay: string       // ex: "MONDAY"
@@ -115,6 +116,7 @@ export type GbpLocationDetails = {
   website: string | null
   description: string | null
   regularHours: GbpHoursPeriod[]
+  serviceItems: GbpServiceItem[]   // serviços de formato livre (editáveis)
 }
 
 function fmtTime(t: Record<string, unknown> | undefined): string {
@@ -125,7 +127,7 @@ function fmtTime(t: Record<string, unknown> | undefined): string {
 }
 
 export async function getLocationDetails(accessToken: string, locationName: string): Promise<GbpLocationDetails> {
-  const readMask = 'name,title,storefrontAddress,phoneNumbers,categories,websiteUri,regularHours,profile,latlng'
+  const readMask = 'name,title,storefrontAddress,phoneNumbers,categories,websiteUri,regularHours,profile,latlng,serviceItems'
   const url = `${BUSINESS_INFO}/${locationName}?readMask=${encodeURIComponent(readMask)}`
   const l = (await gget(url, accessToken)) as Record<string, unknown>
   const categories = l.categories as Record<string, unknown> | undefined
@@ -165,6 +167,13 @@ export async function getLocationDetails(accessToken: string, locationName: stri
       closeDay: String(p.closeDay ?? ''),
       closeTime: fmtTime(p.closeTime as Record<string, unknown> | undefined),
     })),
+    serviceItems: (Array.isArray(l.serviceItems) ? (l.serviceItems as Record<string, unknown>[]) : [])
+      .map(it => {
+        const free = it.freeFormServiceItem as Record<string, unknown> | undefined
+        const label = free?.label as Record<string, unknown> | undefined
+        return { displayName: label?.displayName ? String(label.displayName) : '', description: label?.description ? String(label.description) : '' }
+      })
+      .filter(s => s.displayName),
   }
 }
 
@@ -246,6 +255,39 @@ export async function updateLocationCategories(
       additionalCategories: additionalNames.filter(Boolean).map(n => ({ name: n })),
     },
   })
+}
+
+// ── Serviços (itens de serviço) ────────────────────────────────────────────────
+
+// Atualiza os serviços de FORMATO LIVRE, preservando os estruturados (ligados à
+// categoria) já cadastrados. Relê o estado atual antes de gravar.
+export async function updateLocationServices(
+  accessToken: string, locationName: string, freeForm: GbpServiceItem[],
+): Promise<void> {
+  const cur = (await gget(
+    `${BUSINESS_INFO}/${locationName}?readMask=serviceItems,categories`, accessToken,
+  )) as Record<string, unknown>
+  const items = Array.isArray(cur.serviceItems) ? (cur.serviceItems as Record<string, unknown>[]) : []
+  const estruturados = items.filter(it => it.structuredServiceItem)
+  const cats = cur.categories as Record<string, unknown> | undefined
+  const primary = cats?.primaryCategory as Record<string, unknown> | undefined
+  const primaryName = primary?.name ? String(primary.name) : null
+
+  const livres = freeForm
+    .filter(s => s.displayName.trim())
+    .map(s => ({
+      freeFormServiceItem: {
+        ...(primaryName ? { categoryId: primaryName } : {}),
+        label: { displayName: s.displayName.trim(), description: s.description.trim(), languageCode: 'pt-BR' },
+      },
+    }))
+
+  if (livres.length > 0 && !primaryName) {
+    throw new GoogleApiError(400, 'Defina a categoria principal antes de adicionar serviços.')
+  }
+
+  const url = `${BUSINESS_INFO}/${locationName}?updateMask=serviceItems`
+  await gpatch(url, accessToken, { serviceItems: [...estruturados, ...livres] })
 }
 
 export type GbpAddressInput = {

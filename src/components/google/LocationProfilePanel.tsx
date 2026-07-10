@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import {
   getLocationProfile, saveLocationProfile, saveLocationHours, saveLocationAddress,
-  buscarCategorias, saveLocationCategories,
+  buscarCategorias, saveLocationCategories, saveLocationServices,
   type GbpLocationDetails, type GbpCategory,
 } from '@/app/actions/google'
 
@@ -257,6 +257,56 @@ function CategoriesEditor({ id, det }: { id: string; det: GbpLocationDetails }) 
   )
 }
 
+// ── Editor de serviços ─────────────────────────────────────────────────────────
+
+function ServicesEditor({ id, initial }: { id: string; initial: GbpLocationDetails['serviceItems'] }) {
+  const [itens, setItens] = useState(initial.length ? initial : [{ displayName: '', description: '' }])
+  const [salvando, setSalvando] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const upd = (i: number, campo: 'displayName' | 'description', v: string) =>
+    setItens(prev => prev.map((x, idx) => (idx === i ? { ...x, [campo]: v } : x)))
+
+  async function salvar() {
+    setSalvando(true); setMsg('')
+    const limpos = itens.filter(s => s.displayName.trim())
+    const res = await saveLocationServices(id, limpos)
+    if (res.success) { setMsg('✅ Serviços salvos! Pode levar alguns minutos para refletir.'); setItens(limpos.length ? limpos : [{ displayName: '', description: '' }]) }
+    else setMsg('❌ ' + res.error)
+    setSalvando(false)
+  }
+
+  const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300'
+
+  return (
+    <div className="space-y-2">
+      {itens.map((s, i) => (
+        <div key={i} className="border border-gray-100 rounded-lg p-2.5 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <input className={input} value={s.displayName} onChange={e => upd(i, 'displayName', e.target.value)} placeholder="Nome do serviço (ex: Harmonização facial)" />
+            <button type="button" onClick={() => setItens(prev => prev.filter((_, idx) => idx !== i))}
+              className="text-gray-300 hover:text-red-500 text-sm flex-shrink-0">✕</button>
+          </div>
+          <textarea className={input + ' resize-y min-h-[44px] text-xs'} value={s.description} maxLength={300}
+            onChange={e => upd(i, 'description', e.target.value)} placeholder="Descrição (opcional)" />
+        </div>
+      ))}
+      {itens.length < 20 && (
+        <button type="button" onClick={() => setItens(prev => [...prev, { displayName: '', description: '' }])}
+          className="text-[11px] text-blue-600 hover:underline">+ adicionar serviço</button>
+      )}
+      <p className="text-[10px] text-gray-400">Serviços pré-definidos da categoria (se houver) são preservados e não aparecem aqui.</p>
+      {msg && <p className="text-xs bg-gray-50 border border-gray-200 rounded-lg p-2">{msg}</p>}
+      <div className="flex justify-end">
+        <button onClick={salvar} disabled={salvando}
+          className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 disabled:opacity-40">
+          {salvando ? 'Salvando...' : 'Salvar serviços'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Painel do perfil ───────────────────────────────────────────────────────────
 
 export function LocationProfilePanel({ id }: { id: string }) {
@@ -355,6 +405,12 @@ export function LocationProfilePanel({ id }: { id: string }) {
       <div>
         <label className={label}>Categorias</label>
         <CategoriesEditor id={id} det={det} />
+      </div>
+
+      {/* Serviços */}
+      <div>
+        <label className={label}>Serviços</label>
+        <ServicesEditor id={id} initial={det.serviceItems} />
       </div>
 
       {/* Endereço */}
