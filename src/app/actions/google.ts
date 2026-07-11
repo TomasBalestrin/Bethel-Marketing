@@ -11,7 +11,7 @@ import {
 } from '@/lib/google/business'
 
 import { analyzeProfile } from '@/lib/google/recommendations'
-import { getPerformance } from '@/lib/google/performance'
+import { getPerformance, getSearchKeywords } from '@/lib/google/performance'
 import { placesConfigured, getPlaceById, getPlaceLatLng, searchCompetitors, type Competitor } from '@/lib/google/competitors'
 import { listReviews, replyToReview, draftReply } from '@/lib/google/reviews'
 import { buildAudit, type AuditCheck } from '@/lib/google/audit'
@@ -19,7 +19,7 @@ import { serpapiConfigured, searchMapsRank, type MapRankItem } from '@/lib/googl
 
 export type { GbpLocationDetails, GbpCategory } from '@/lib/google/business'
 export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
-export type { PerfResult, PerfMetric } from '@/lib/google/performance'
+export type { PerfResult, PerfMetric, DailyPoint, SearchKeyword } from '@/lib/google/performance'
 export type { GbpReview, ReviewsResult } from '@/lib/google/reviews'
 export type { AuditCheck } from '@/lib/google/audit'
 export type { MapRankItem } from '@/lib/google/rankmaps'
@@ -381,7 +381,12 @@ export async function getLocationAudit(id: string): Promise<Result<LocationAudit
 
 // ── Desempenho ─────────────────────────────────────────────────────────────────
 
-export async function getLocationPerformance(id: string, days = 30): Promise<Result<import('@/lib/google/performance').PerfResult>> {
+export type PerformanceView = import('@/lib/google/performance').PerfResult & {
+  keywords: import('@/lib/google/performance').SearchKeyword[]
+  reviewsResumo: { total: number; averageRating: number | null; novasNoPeriodo: number } | null
+}
+
+export async function getLocationPerformance(id: string, days = 30): Promise<Result<PerformanceView>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
@@ -390,7 +395,22 @@ export async function getLocationPerformance(id: string, days = 30): Promise<Res
     const token = await getValidAccessToken(dbUser.id)
     if (!token) return { success: false, error: 'Conta Google não conectada' }
     const perf = await getPerformance(token, row.locationName, days)
-    return { success: true, data: perf }
+
+    // extras (resilientes: se falharem, o desempenho ainda aparece)
+    let keywords: import('@/lib/google/performance').SearchKeyword[] = []
+    try { keywords = await getSearchKeywords(token, row.locationName, perf.days) } catch { /* ignora */ }
+
+    let reviewsResumo: PerformanceView['reviewsResumo'] = null
+    try {
+      if (row.accountName) {
+        const rv = await listReviews(token, row.accountName, row.locationName)
+        const cutoff = Date.now() - perf.days * 86400000
+        const novas = rv.reviews.filter(r => { const t = Date.parse(r.createTime); return !isNaN(t) && t >= cutoff }).length
+        reviewsResumo = { total: rv.total, averageRating: rv.averageRating, novasNoPeriodo: novas }
+      }
+    } catch { /* ignora */ }
+
+    return { success: true, data: { ...perf, keywords, reviewsResumo } }
   } catch (e) {
     if (e instanceof GoogleApiError && (e.status === 403 || e.status === 404)) {
       return { success: false, error: 'Ative a Business Profile Performance API no Google Cloud e confirme que o perfil está verificado.' }

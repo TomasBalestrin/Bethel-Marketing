@@ -36,11 +36,19 @@ function gdObj(o: Record<string, unknown>): number { return Number(o.year) * 100
 export const PERIODOS_VALIDOS = [7, 30, 90, 180] as const
 
 export type PerfMetric = { key: string; label: string; core: boolean; total: number; prev: number; deltaPct: number | null }
+export type DailyPoint = { date: string; views: number; calls: number; directions: number; website: number }
+export type SearchKeyword = { keyword: string; count: number; abaixoDe: boolean }
 export type PerfResult = {
   days: number
   metrics: PerfMetric[]
   impressionsBreakdown: { label: string; value: number }[]
+  series: DailyPoint[]
   semDados: boolean
+}
+
+function isoFromInt(di: number): string {
+  const y = Math.floor(di / 10000), m = Math.floor((di % 10000) / 100), d = di % 100
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
 
 export async function getPerformance(accessToken: string, locationName: string, days = 30): Promise<PerfResult> {
@@ -68,6 +76,7 @@ export async function getPerformance(accessToken: string, locationName: string, 
 
   const sumLast: Record<string, number> = {}
   const sumPrev: Record<string, number> = {}
+  const daily: Record<number, DailyPoint> = {}
   let anyData = false
 
   const blocks = Array.isArray(data.multiDailyMetricTimeSeries) ? (data.multiDailyMetricTimeSeries as Record<string, unknown>[]) : []
@@ -83,11 +92,19 @@ export async function getPerformance(accessToken: string, locationName: string, 
         if (!dObj) continue
         const di = gdObj(dObj)
         if (v > 0) anyData = true
-        if (di > lastStart && di <= lastEnd) sumLast[metric] = (sumLast[metric] || 0) + v
-        else if (di > prevStart && di <= lastStart) sumPrev[metric] = (sumPrev[metric] || 0) + v
+        if (di > lastStart && di <= lastEnd) {
+          sumLast[metric] = (sumLast[metric] || 0) + v
+          const p = (daily[di] ??= { date: isoFromInt(di), views: 0, calls: 0, directions: 0, website: 0 })
+          if (IMPRESSION_METRICS.includes(metric)) p.views += v
+          else if (metric === 'CALL_CLICKS') p.calls += v
+          else if (metric === 'BUSINESS_DIRECTION_REQUESTS') p.directions += v
+          else if (metric === 'WEBSITE_CLICKS') p.website += v
+        } else if (di > prevStart && di <= lastStart) sumPrev[metric] = (sumPrev[metric] || 0) + v
       }
     }
   }
+
+  const serie = Object.keys(daily).map(Number).sort((a, b) => a - b).map(di => daily[di])
 
   const sumOf = (keys: string[], bag: Record<string, number>) => keys.reduce((a, k) => a + (bag[k] || 0), 0)
   const mk = (key: string, label: string, keys: string[], core: boolean): PerfMetric => {
@@ -110,5 +127,34 @@ export async function getPerformance(accessToken: string, locationName: string, 
     { label: 'Mapas (Maps)', value: sumOf(['BUSINESS_IMPRESSIONS_DESKTOP_MAPS', 'BUSINESS_IMPRESSIONS_MOBILE_MAPS'], sumLast) },
   ]
 
-  return { days: janela, metrics, impressionsBreakdown, semDados: !anyData }
+  return { days: janela, metrics, impressionsBreakdown, series: serie, semDados: !anyData }
+}
+
+// Palavras-chave que as pessoas usaram para encontrar o perfil (dados MENSAIS).
+export async function getSearchKeywords(accessToken: string, locationName: string, days = 30): Promise<SearchKeyword[]> {
+  const now = new Date()
+  const start = new Date(now.getTime() - days * DAY)
+  const params = new URLSearchParams()
+  params.set('monthlyRange.startMonth.year', String(start.getUTCFullYear()))
+  params.set('monthlyRange.startMonth.month', String(start.getUTCMonth() + 1))
+  params.set('monthlyRange.endMonth.year', String(now.getUTCFullYear()))
+  params.set('monthlyRange.endMonth.month', String(now.getUTCMonth() + 1))
+  params.set('pageSize', '100')
+
+  const url = `${PERF}/${locationName}/searchkeywords/impressions/monthly?${params.toString()}`
+  const data = await gget(url, accessToken) as Record<string, unknown>
+  const list = Array.isArray(data.searchKeywordsCounts) ? (data.searchKeywordsCounts as Record<string, unknown>[]) : []
+
+  const map: Record<string, SearchKeyword> = {}
+  for (const k of list) {
+    const kw = String(k.searchKeyword ?? '').trim()
+    if (!kw) continue
+    const iv = (k.insightsValue ?? {}) as Record<string, unknown>
+    const abaixo = iv.value == null && iv.threshold != null
+    const val = iv.value != null ? Number(iv.value) : iv.threshold != null ? Number(iv.threshold) : 0
+    const cur = (map[kw] ??= { keyword: kw, count: 0, abaixoDe: false })
+    cur.count += val
+    if (abaixo) cur.abaixoDe = true
+  }
+  return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 25)
 }
