@@ -462,11 +462,17 @@ export async function rankNoMapa(id: string, query: string): Promise<Result<MapR
 
 // ── Grade de Rank (heatmap via SerpApi) ────────────────────────────────────────
 
-export type GridPoint = { row: number; col: number; lat: number; lng: number; position: number | null }
+export type GridResultItem = { placeId: string | null; title: string; position: number }
+export type GridCell = { row: number; col: number; lat: number; lng: number; results: GridResultItem[] }
+export type RankedBiz = { key: string; title: string; placeId: string | null; avg: number; coverage: number; isSelf: boolean }
 export type GridRankResult = {
-  query: string; size: number; points: GridPoint[]
+  query: string; size: number
   center: { lat: number; lng: number }
-  encontrados: number; total: number; media: number | null; cidade: string | null
+  cidade: string | null
+  cells: GridCell[]
+  ranking: RankedBiz[]
+  selfKey: string | null
+  total: number
 }
 
 export async function gridRank(id: string, query: string, size = 3): Promise<Result<GridRankResult> & { naoConfigurado?: boolean }> {
@@ -501,22 +507,42 @@ export async function gridRank(id: string, query: string, size = 3): Promise<Res
       coords.push({ row: r, col: c, lat: base.lat + (mid - r) * dLat, lng: base.lng + (c - mid) * dLng })
     }
 
-    const points: GridPoint[] = await Promise.all(coords.map(async pt => {
+    const cells: GridCell[] = await Promise.all(coords.map(async pt => {
       try {
         const items = await searchMapsRank({ query: termo, lat: pt.lat, lng: pt.lng })
-        const found = items.find(it => (row.placeId && it.placeId === row.placeId) || norm(it.title) === alvo)
-        return { row: pt.row, col: pt.col, lat: pt.lat, lng: pt.lng, position: found ? found.position : null }
+        const results = items.slice(0, 20).map(it => ({ placeId: it.placeId, title: it.title, position: it.position }))
+        return { row: pt.row, col: pt.col, lat: pt.lat, lng: pt.lng, results }
       } catch {
-        return { row: pt.row, col: pt.col, lat: pt.lat, lng: pt.lng, position: null }
+        return { row: pt.row, col: pt.col, lat: pt.lat, lng: pt.lng, results: [] }
       }
     }))
 
-    const achados = points.filter(p => p.position != null) as { position: number }[]
-    const media = achados.length ? achados.reduce((a, p) => a + p.position, 0) / achados.length : null
+    // chave única por negócio (placeId, ou nome normalizado)
+    const keyOf = (placeId: string | null, title: string) => placeId || norm(title)
+    const selfKey = row.placeId || alvo
+
+    // agrega todos os negócios vistos na grade -> posição média + cobertura
+    const acc: Record<string, { title: string; placeId: string | null; positions: number[] }> = {}
+    for (const cell of cells) {
+      for (const r of cell.results) {
+        const k = keyOf(r.placeId, r.title)
+        const a = (acc[k] ??= { title: r.title, placeId: r.placeId, positions: [] })
+        a.positions.push(r.position)
+      }
+    }
+    const ranking: RankedBiz[] = Object.entries(acc)
+      .map(([key, v]) => ({
+        key, title: v.title, placeId: v.placeId,
+        avg: v.positions.reduce((s, p) => s + p, 0) / v.positions.length,
+        coverage: v.positions.length,
+        isSelf: key === selfKey,
+      }))
+      .sort((a, b) => a.avg - b.avg || b.coverage - a.coverage)
+      .slice(0, 20)
 
     return {
       success: true,
-      data: { query: termo, size: n, points, center: { lat: base.lat, lng: base.lng }, encontrados: achados.length, total: n * n, media, cidade: det.city },
+      data: { query: termo, size: n, center: { lat: base.lat, lng: base.lng }, cidade: det.city, cells, ranking, selfKey, total: n * n },
     }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao montar o mapa de rank' }

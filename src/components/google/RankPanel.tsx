@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { gridRank, type GridRankResult } from '@/app/actions/google'
-import { RankMap } from './RankMap'
+import { RankMap, type MapPoint } from './RankMap'
+
+const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+const keyOf = (placeId: string | null, title: string) => placeId || norm(title)
 
 export function RankPanel({ id }: { id: string }) {
   const [termo, setTermo] = useState('')
@@ -11,20 +14,38 @@ export function RankPanel({ id }: { id: string }) {
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState('')
   const [naoConfig, setNaoConfig] = useState(false)
+  const [selKey, setSelKey] = useState<string | null>(null)
 
   async function buscar() {
     if (!termo.trim()) return
     setCarregando(true); setErro(''); setNaoConfig(false); setData(null)
     const res = await gridRank(id, termo, size)
-    if (res.success) setData(res.data)
+    if (res.success) { setData(res.data); setSelKey(res.data.selfKey) }
     else { setErro(res.error); setNaoConfig(Boolean(res.naoConfigurado)) }
     setCarregando(false)
   }
 
+  // pontos do mapa para o negócio selecionado (sem custo extra de API)
+  const points = useMemo<MapPoint[]>(() => {
+    if (!data || !selKey) return []
+    return data.cells.map(c => {
+      const r = c.results.find(x => keyOf(x.placeId, x.title) === selKey)
+      return { lat: c.lat, lng: c.lng, position: r ? r.position : null }
+    })
+  }, [data, selKey])
+
+  const resumo = useMemo(() => {
+    const achados = points.filter(p => p.position != null)
+    const media = achados.length ? achados.reduce((s, p) => s + (p.position as number), 0) / achados.length : null
+    return { encontrados: achados.length, total: points.length, media }
+  }, [points])
+
+  const selBiz = data?.ranking.find(b => b.key === selKey)
+
   return (
     <div>
       <p className="text-xs text-gray-500 mb-2">
-        Sua posição no Google Maps para uma palavra-chave, medida em vários pontos ao redor do negócio (mapa de calor).
+        Posição no Google Maps para uma palavra-chave, medida em vários pontos ao redor do negócio. Clique num concorrente para ver o mapa dele.
       </p>
 
       <div className="flex items-center gap-1.5 mb-2">
@@ -66,13 +87,14 @@ export function RankPanel({ id }: { id: string }) {
       {data && (
         <div className="space-y-3">
           <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-100 rounded-lg p-3 text-sm text-gray-700">
-            Para <b>{data.query}</b>{data.cidade ? <> em <b>{data.cidade}</b></> : null}: aparece em{' '}
-            <b className="text-blue-700">{data.encontrados} de {data.total}</b> pontos
-            {data.media != null && <> · posição média <b>{data.media.toFixed(1)}</b></>}.
+            Vendo <b>{selBiz?.title ?? 'seu negócio'}</b>{selBiz?.isSelf ? ' (você)' : ''} para <b>{data.query}</b>
+            {data.cidade ? <> em <b>{data.cidade}</b></> : null}: aparece em{' '}
+            <b className="text-blue-700">{resumo.encontrados} de {resumo.total}</b> pontos
+            {resumo.media != null && <> · posição média <b>{resumo.media.toFixed(1)}</b></>}.
           </div>
 
-          {/* Mapa real com as posições */}
-          <RankMap data={data} />
+          {/* Mapa real */}
+          <RankMap points={points} />
 
           {/* Legenda */}
           <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center text-[10px] text-gray-500">
@@ -80,10 +102,32 @@ export function RankPanel({ id }: { id: string }) {
             <span className="inline-flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#84cc16' }} />4º-7º</span>
             <span className="inline-flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#f59e0b' }} />8º-10º</span>
             <span className="inline-flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#ef4444' }} />11º+</span>
-            <span className="inline-flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#d1d5db' }} />fora do top 20</span>
+            <span className="inline-flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#9ca3af' }} />fora do top 20</span>
           </div>
 
-          <p className="text-[10px] text-gray-400 text-center">Cada círculo é um ponto ~1,5 km ao redor do negócio. Verde = você está bem posicionado ali; vermelho/cinza = mal posicionado.</p>
+          {/* Ranking competitivo */}
+          <div>
+            <p className="text-xs font-semibold text-gray-700 mb-1">Ranking para &quot;{data.query}&quot; na região <span className="font-normal text-gray-400">(por posição média · clique para ver no mapa)</span></p>
+            <div className="border border-gray-100 rounded-lg overflow-hidden">
+              <div className="grid grid-cols-[28px_1fr_auto_auto] gap-2 px-3 py-2 bg-gray-50 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                <span>#</span><span>Negócio</span><span className="text-right">Pos. média</span><span className="text-right">Cobertura</span>
+              </div>
+              {data.ranking.map((b, i) => (
+                <button key={b.key} onClick={() => setSelKey(b.key)}
+                  className={`w-full grid grid-cols-[28px_1fr_auto_auto] gap-2 px-3 py-2 text-xs items-center border-t border-gray-50 text-left hover:bg-gray-50 ${b.key === selKey ? 'bg-blue-50' : ''} ${b.isSelf ? 'font-semibold' : ''}`}>
+                  <span className="text-gray-400">{i + 1}</span>
+                  <span className="truncate text-gray-800">{b.title}{b.isSelf && <span className="text-blue-600"> (você)</span>}</span>
+                  <span className="text-right text-gray-700">{b.avg.toFixed(1)}</span>
+                  <span className="text-right text-gray-500">{b.coverage}/{data.total}</span>
+                </button>
+              ))}
+            </div>
+            {!data.ranking.some(b => b.isSelf) && (
+              <p className="text-[10px] text-amber-600 mt-1">Seu negócio não apareceu em nenhum ponto para essa palavra — sinal forte de que precisa otimizar.</p>
+            )}
+          </div>
+
+          <p className="text-[10px] text-gray-400">Dados reais do Google Maps (SerpApi). &quot;Cobertura&quot; = em quantos pontos o negócio aparece. Uma só busca já traz todos os concorrentes.</p>
         </div>
       )}
     </div>

@@ -3,7 +3,8 @@
 import { useEffect, useRef } from 'react'
 import type * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { GridRankResult } from '@/app/actions/google'
+
+export type MapPoint = { lat: number; lng: number; position: number | null }
 
 function color(pos: number | null): string {
   if (pos == null) return '#9ca3af'
@@ -14,7 +15,7 @@ function color(pos: number | null): string {
 }
 function label(pos: number | null): string { return pos == null ? '?' : pos > 20 ? '20+' : String(pos) }
 
-export function RankMap({ data }: { data: GridRankResult }) {
+export function RankMap({ points }: { points: MapPoint[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layerRef = useRef<L.LayerGroup | null>(null)
@@ -37,7 +38,7 @@ export function RankMap({ data }: { data: GridRankResult }) {
       grupo.clearLayers()
 
       const bounds: [number, number][] = []
-      for (const p of data.points) {
+      for (const p of points) {
         const html = `<div style="width:28px;height:28px;border-radius:50%;background:${color(p.position)};color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.45)">${label(p.position)}</div>`
         const icon = Lmod.divIcon({ html, className: '', iconSize: [28, 28], iconAnchor: [14, 14] })
         Lmod.marker([p.lat, p.lng], { icon }).addTo(grupo)
@@ -47,7 +48,7 @@ export function RankMap({ data }: { data: GridRankResult }) {
       setTimeout(() => map.invalidateSize(), 100) // corrige render dentro do modal
     })()
     return () => { cancelled = true }
-  }, [data])
+  }, [points])
 
   useEffect(() => () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null } }, [])
 
