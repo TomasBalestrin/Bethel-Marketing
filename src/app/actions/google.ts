@@ -462,9 +462,10 @@ export async function rankNoMapa(id: string, query: string): Promise<Result<MapR
 
 // ── Grade de Rank (heatmap via SerpApi) ────────────────────────────────────────
 
-export type GridPoint = { row: number; col: number; position: number | null }
+export type GridPoint = { row: number; col: number; lat: number; lng: number; position: number | null }
 export type GridRankResult = {
   query: string; size: number; points: GridPoint[]
+  center: { lat: number; lng: number }
   encontrados: number; total: number; media: number | null; cidade: string | null
 }
 
@@ -500,13 +501,13 @@ export async function gridRank(id: string, query: string, size = 3): Promise<Res
       coords.push({ row: r, col: c, lat: base.lat + (mid - r) * dLat, lng: base.lng + (c - mid) * dLng })
     }
 
-    const points = await Promise.all(coords.map(async pt => {
+    const points: GridPoint[] = await Promise.all(coords.map(async pt => {
       try {
         const items = await searchMapsRank({ query: termo, lat: pt.lat, lng: pt.lng })
         const found = items.find(it => (row.placeId && it.placeId === row.placeId) || norm(it.title) === alvo)
-        return { row: pt.row, col: pt.col, position: found ? found.position : null }
+        return { row: pt.row, col: pt.col, lat: pt.lat, lng: pt.lng, position: found ? found.position : null }
       } catch {
-        return { row: pt.row, col: pt.col, position: null }
+        return { row: pt.row, col: pt.col, lat: pt.lat, lng: pt.lng, position: null }
       }
     }))
 
@@ -515,7 +516,7 @@ export async function gridRank(id: string, query: string, size = 3): Promise<Res
 
     return {
       success: true,
-      data: { query: termo, size: n, points, encontrados: achados.length, total: n * n, media, cidade: det.city },
+      data: { query: termo, size: n, points, center: { lat: base.lat, lng: base.lng }, encontrados: achados.length, total: n * n, media, cidade: det.city },
     }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao montar o mapa de rank' }

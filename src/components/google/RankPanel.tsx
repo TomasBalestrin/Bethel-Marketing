@@ -2,14 +2,7 @@
 
 import { useState } from 'react'
 import { gridRank, type GridRankResult } from '@/app/actions/google'
-
-function cellStyle(pos: number | null): { bg: string; texto: string } {
-  if (pos == null) return { bg: '#d1d5db', texto: '?' }        // cinza
-  if (pos <= 3) return { bg: '#16a34a', texto: String(pos) }   // verde forte
-  if (pos <= 7) return { bg: '#84cc16', texto: String(pos) }   // lima
-  if (pos <= 10) return { bg: '#f59e0b', texto: String(pos) }  // laranja
-  return { bg: '#ef4444', texto: pos > 20 ? '20+' : String(pos) } // vermelho
-}
+import { RankMap } from './RankMap'
 
 export function RankPanel({ id }: { id: string }) {
   const [termo, setTermo] = useState('')
@@ -78,23 +71,8 @@ export function RankPanel({ id }: { id: string }) {
             {data.media != null && <> · posição média <b>{data.media.toFixed(1)}</b></>}.
           </div>
 
-          {/* Mapa de calor */}
-          <div className="mx-auto" style={{ maxWidth: data.size === 5 ? 300 : 220 }}>
-            <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${data.size}, 1fr)` }}>
-              {data.points.map(p => {
-                const s = cellStyle(p.position)
-                const centro = p.row === (data.size - 1) / 2 && p.col === (data.size - 1) / 2
-                return (
-                  <div key={`${p.row}-${p.col}`}
-                    className="aspect-square rounded-full grid place-items-center text-xs font-bold text-white"
-                    style={{ background: s.bg, boxShadow: centro ? '0 0 0 2px #1f2937' : undefined }}
-                    title={centro ? 'Sua localização' : undefined}>
-                    {s.texto}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+          {/* Mapa real com as posições */}
+          <RankMap data={data} />
 
           {/* Legenda */}
           <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center text-[10px] text-gray-500">
