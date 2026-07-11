@@ -426,9 +426,20 @@ export async function rankNoMapa(id: string, query: string): Promise<Result<MapR
     if (!token) return { success: false, error: 'Conta Google não conectada' }
 
     const det = await getLocationDetails(token, row.locationName)
-    const items = await searchMapsRank({ query: termo, lat: det.lat, lng: det.lng })
+    const raw = await searchMapsRank({ query: termo, lat: det.lat, lng: det.lng })
 
     const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+
+    // Filtra para a cidade do perfil (remove cidades vizinhas). Fallback: se cortar
+    // demais (nome da cidade n\u00e3o bate nos endere\u00e7os), mant\u00e9m a lista completa.
+    let items = raw
+    if (det.city) {
+      const nc = norm(det.city)
+      const doMunicipio = raw.filter(it => it.address && norm(it.address).includes(nc))
+      if (doMunicipio.length >= 3) items = doMunicipio
+    }
+    items = items.map((it, i) => ({ ...it, position: i + 1 }))
+
     const alvo = norm(det.title)
     const idx = items.findIndex(it => (row.placeId && it.placeId === row.placeId) || norm(it.title) === alvo)
 
