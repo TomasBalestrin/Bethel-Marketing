@@ -108,19 +108,25 @@ export function RankPanel({ id }: { id: string }) {
           {/* Ranking competitivo */}
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-1">Ranking para &quot;{data.query}&quot; na região <span className="font-normal text-gray-400">(por posição média · clique para ver no mapa)</span></p>
-            <div className="border border-gray-100 rounded-lg overflow-hidden">
-              <div className="grid grid-cols-[28px_1fr_auto_auto] gap-2 px-3 py-2 bg-gray-50 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
-                <span>#</span><span>Negócio</span><span className="text-right">Pos. média</span><span className="text-right">Cobertura</span>
+            <div className="border border-gray-100 rounded-lg overflow-x-auto">
+              <div className="min-w-[420px]">
+                <div className="grid grid-cols-[24px_1fr_auto_auto_auto_auto] gap-2 px-3 py-2 bg-gray-50 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                  <span>#</span><span>Negócio</span>
+                  <span className="text-right">Nota</span><span className="text-right">Aval.</span>
+                  <span className="text-right">Pos.méd</span><span className="text-right">Cob.</span>
+                </div>
+                {data.ranking.map((b, i) => (
+                  <button key={b.key} onClick={() => setSelKey(b.key)}
+                    className={`w-full grid grid-cols-[24px_1fr_auto_auto_auto_auto] gap-2 px-3 py-2 text-xs items-center border-t border-gray-50 text-left hover:bg-gray-50 ${b.key === selKey ? 'bg-blue-50' : ''} ${b.isSelf ? 'font-semibold' : ''}`}>
+                    <span className="text-gray-400">{i + 1}</span>
+                    <span className="truncate text-gray-800">{b.title}{b.isSelf && <span className="text-blue-600"> (você)</span>}</span>
+                    <span className="text-right text-gray-700 whitespace-nowrap">{b.rating != null ? `⭐${b.rating.toFixed(1)}` : '–'}</span>
+                    <span className="text-right text-gray-600">{b.reviews.toLocaleString('pt-BR')}</span>
+                    <span className="text-right text-gray-700">{b.avg.toFixed(1)}</span>
+                    <span className="text-right text-gray-500">{b.coverage}/{data.total}</span>
+                  </button>
+                ))}
               </div>
-              {data.ranking.map((b, i) => (
-                <button key={b.key} onClick={() => setSelKey(b.key)}
-                  className={`w-full grid grid-cols-[28px_1fr_auto_auto] gap-2 px-3 py-2 text-xs items-center border-t border-gray-50 text-left hover:bg-gray-50 ${b.key === selKey ? 'bg-blue-50' : ''} ${b.isSelf ? 'font-semibold' : ''}`}>
-                  <span className="text-gray-400">{i + 1}</span>
-                  <span className="truncate text-gray-800">{b.title}{b.isSelf && <span className="text-blue-600"> (você)</span>}</span>
-                  <span className="text-right text-gray-700">{b.avg.toFixed(1)}</span>
-                  <span className="text-right text-gray-500">{b.coverage}/{data.total}</span>
-                </button>
-              ))}
             </div>
             {!data.ranking.some(b => b.isSelf) && (
               <p className="text-[10px] text-amber-600 mt-1">Seu negócio não apareceu em nenhum ponto para essa palavra — sinal forte de que precisa otimizar.</p>

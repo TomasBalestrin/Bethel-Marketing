@@ -499,9 +499,9 @@ export async function rankNoMapa(id: string, query: string): Promise<Result<MapR
 
 // ── Grade de Rank (heatmap via SerpApi) ────────────────────────────────────────
 
-export type GridResultItem = { placeId: string | null; title: string; position: number }
+export type GridResultItem = { placeId: string | null; title: string; position: number; rating: number | null; reviews: number }
 export type GridCell = { row: number; col: number; lat: number; lng: number; results: GridResultItem[] }
-export type RankedBiz = { key: string; title: string; placeId: string | null; avg: number; coverage: number; isSelf: boolean }
+export type RankedBiz = { key: string; title: string; placeId: string | null; rating: number | null; reviews: number; avg: number; coverage: number; isSelf: boolean }
 export type GridRankResult = {
   query: string; size: number
   center: { lat: number; lng: number }
@@ -547,7 +547,7 @@ export async function gridRank(id: string, query: string, size = 3): Promise<Res
     const cells: GridCell[] = await Promise.all(coords.map(async pt => {
       try {
         const items = await searchMapsRank({ query: termo, lat: pt.lat, lng: pt.lng })
-        const results = items.slice(0, 20).map(it => ({ placeId: it.placeId, title: it.title, position: it.position }))
+        const results = items.slice(0, 20).map(it => ({ placeId: it.placeId, title: it.title, position: it.position, rating: it.rating, reviews: it.reviews }))
         return { row: pt.row, col: pt.col, lat: pt.lat, lng: pt.lng, results }
       } catch {
         return { row: pt.row, col: pt.col, lat: pt.lat, lng: pt.lng, results: [] }
@@ -559,17 +559,19 @@ export async function gridRank(id: string, query: string, size = 3): Promise<Res
     const selfKey = row.placeId || alvo
 
     // agrega todos os negócios vistos na grade -> posição média + cobertura
-    const acc: Record<string, { title: string; placeId: string | null; positions: number[] }> = {}
+    const acc: Record<string, { title: string; placeId: string | null; rating: number | null; reviews: number; positions: number[] }> = {}
     for (const cell of cells) {
       for (const r of cell.results) {
         const k = keyOf(r.placeId, r.title)
-        const a = (acc[k] ??= { title: r.title, placeId: r.placeId, positions: [] })
+        const a = (acc[k] ??= { title: r.title, placeId: r.placeId, rating: r.rating, reviews: r.reviews, positions: [] })
         a.positions.push(r.position)
+        if (r.reviews > a.reviews) a.reviews = r.reviews
+        if (r.rating != null) a.rating = r.rating
       }
     }
     const ranking: RankedBiz[] = Object.entries(acc)
       .map(([key, v]) => ({
-        key, title: v.title, placeId: v.placeId,
+        key, title: v.title, placeId: v.placeId, rating: v.rating, reviews: v.reviews,
         avg: v.positions.reduce((s, p) => s + p, 0) / v.positions.length,
         coverage: v.positions.length,
         isSelf: key === selfKey,
