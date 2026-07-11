@@ -12,7 +12,7 @@ import {
 
 import { analyzeProfile } from '@/lib/google/recommendations'
 import { getPerformance } from '@/lib/google/performance'
-import { placesConfigured, getPlaceById, searchCompetitors, type Competitor } from '@/lib/google/competitors'
+import { placesConfigured, getPlaceById, getPlaceLatLng, searchCompetitors, type Competitor } from '@/lib/google/competitors'
 import { listReviews, replyToReview, draftReply } from '@/lib/google/reviews'
 import { serpapiConfigured, searchMapsRank, type MapRankItem } from '@/lib/google/rankmaps'
 
@@ -409,6 +409,16 @@ export async function getLocationCompetitors(id: string): Promise<Result<Competi
 
 // ── Rank no Mapa (SerpApi) ─────────────────────────────────────────────────────
 
+// Coordenadas do perfil: usa o latlng da API; se vier vazio, busca pela Places API via placeId.
+async function resolveLatLng(det: GbpLocationDetails, placeId: string | null): Promise<{ lat: number; lng: number } | null> {
+  if (det.lat != null && det.lng != null) return { lat: det.lat, lng: det.lng }
+  if (placeId && placesConfigured()) {
+    const c = await getPlaceLatLng(placeId)
+    if (c) return c
+  }
+  return null
+}
+
 export type MapRankResult = { query: string; items: MapRankItem[]; minhaPosicao: number | null; cidade: string | null }
 
 export async function rankNoMapa(id: string, query: string): Promise<Result<MapRankResult> & { naoConfigurado?: boolean }> {
@@ -426,7 +436,8 @@ export async function rankNoMapa(id: string, query: string): Promise<Result<MapR
     if (!token) return { success: false, error: 'Conta Google não conectada' }
 
     const det = await getLocationDetails(token, row.locationName)
-    const raw = await searchMapsRank({ query: termo, lat: det.lat, lng: det.lng })
+    const coords = await resolveLatLng(det, row.placeId)
+    const raw = await searchMapsRank({ query: termo, lat: coords?.lat ?? null, lng: coords?.lng ?? null })
 
     const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 
@@ -472,20 +483,21 @@ export async function gridRank(id: string, query: string, size = 3): Promise<Res
     const token = await getValidAccessToken(dbUser.id)
     if (!token) return { success: false, error: 'Conta Google não conectada' }
     const det = await getLocationDetails(token, row.locationName)
-    if (det.lat == null || det.lng == null) {
-      return { success: false, error: 'O perfil não tem coordenadas para montar o mapa de rank.' }
+    const base = await resolveLatLng(det, row.placeId)
+    if (!base) {
+      return { success: false, error: 'Não consegui obter as coordenadas do perfil (nem pela Places API). Confirme o endereço no perfil.' }
     }
 
     const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
     const alvo = norm(det.title)
     const spacingKm = 1.5
     const dLat = spacingKm / 111
-    const dLng = spacingKm / (111 * Math.cos((det.lat * Math.PI) / 180))
+    const dLng = spacingKm / (111 * Math.cos((base.lat * Math.PI) / 180))
     const mid = (n - 1) / 2
 
     const coords: { row: number; col: number; lat: number; lng: number }[] = []
     for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
-      coords.push({ row: r, col: c, lat: det.lat + (mid - r) * dLat, lng: det.lng + (c - mid) * dLng })
+      coords.push({ row: r, col: c, lat: base.lat + (mid - r) * dLat, lng: base.lng + (c - mid) * dLng })
     }
 
     const points = await Promise.all(coords.map(async pt => {

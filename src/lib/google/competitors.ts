@@ -77,6 +77,19 @@ const BASE_FIELDS = 'id,displayName,rating,userRatingCount,formattedAddress,phot
 const FIELDS = BASE_FIELDS.split(',').map(f => `places.${f}`).join(',')
 const FIELDS_ONE = BASE_FIELDS
 
+export async function getPlaceLatLng(placeId: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const p = await placesFetch(`/places/${encodeURIComponent(placeId)}?languageCode=pt-BR`, 'location', { method: 'GET' })
+    const loc = (p as Record<string, unknown>).location as Record<string, unknown> | undefined
+    if (loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number') {
+      return { lat: loc.latitude as number, lng: loc.longitude as number }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export async function getPlaceById(placeId: string): Promise<Competitor | null> {
   try {
     const p = await placesFetch(`/places/${encodeURIComponent(placeId)}?languageCode=pt-BR`, FIELDS_ONE, { method: 'GET' })
