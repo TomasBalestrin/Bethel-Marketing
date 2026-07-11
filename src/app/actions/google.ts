@@ -14,12 +14,14 @@ import { analyzeProfile } from '@/lib/google/recommendations'
 import { getPerformance } from '@/lib/google/performance'
 import { placesConfigured, getPlaceById, getPlaceLatLng, searchCompetitors, type Competitor } from '@/lib/google/competitors'
 import { listReviews, replyToReview, draftReply } from '@/lib/google/reviews'
+import { buildAudit, type AuditCheck } from '@/lib/google/audit'
 import { serpapiConfigured, searchMapsRank, type MapRankItem } from '@/lib/google/rankmaps'
 
 export type { GbpLocationDetails, GbpCategory } from '@/lib/google/business'
 export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
 export type { PerfResult, PerfMetric } from '@/lib/google/performance'
 export type { GbpReview, ReviewsResult } from '@/lib/google/reviews'
+export type { AuditCheck } from '@/lib/google/audit'
 export type { MapRankItem } from '@/lib/google/rankmaps'
 
 type Result<T = void> =
@@ -339,6 +341,41 @@ export async function getLocationRecommendations(id: string): Promise<Result<imp
   } catch (e) {
     if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Acesso à API ainda não aprovado pelo Google.' }
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao gerar recomendações' }
+  }
+}
+
+// ── Auditoria (nota + checklist + plano de ação da IA) ─────────────────────────
+
+export type LocationAudit = {
+  score: number
+  checks: AuditCheck[]
+  recomendacoes: import('@/lib/google/recommendations').GbpRecommendation[]
+  rotina: import('@/lib/google/recommendations').GbpRoutineItem[]
+}
+
+export async function getLocationAudit(id: string): Promise<Result<LocationAudit>> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+
+    const det = await getLocationDetails(token, row.locationName)
+    // avaliações são opcionais (dependem da API v4); se falhar, a auditoria segue sem elas
+    let reviews = null
+    try {
+      if (row.accountName) reviews = await listReviews(token, row.accountName, row.locationName)
+    } catch { /* ignora: checagens de avaliação ficam de fora */ }
+
+    const audit = buildAudit(det, reviews)
+    const analise = await analyzeProfile(det)
+
+    return { success: true, data: { score: audit.score, checks: audit.checks, recomendacoes: analise.recomendacoes, rotina: analise.rotina } }
+  } catch (e) {
+    if (e instanceof GoogleApiError && e.status === 403) return { success: false, error: 'Acesso à API ainda não aprovado pelo Google.' }
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao gerar auditoria' }
   }
 }
 

@@ -9,7 +9,7 @@ import {
 } from '@/app/actions/google'
 import { Modal } from '@/components/google/Modal'
 import { LocationProfilePanel } from '@/components/google/LocationProfilePanel'
-import { RecommendationsPanel } from '@/components/google/RecommendationsPanel'
+import { AuditPanel } from '@/components/google/AuditPanel'
 import { PerformancePanel } from '@/components/google/PerformancePanel'
 import { CompetitorsPanel } from '@/components/google/CompetitorsPanel'
 import { ReviewsPanel } from '@/components/google/ReviewsPanel'
@@ -23,7 +23,7 @@ const FEATURES: {
   { key: 'perfil', emoji: '🏢', titulo: 'Perfil', desc: 'Ver e editar nome, telefone, site e descrição', pronto: true, accent: 'bg-blue-50', hover: 'hover:border-blue-200' },
   { key: 'avaliacoes', emoji: '⭐', titulo: 'Avaliações', desc: 'Listar e responder (com rascunho da IA)', pronto: true, accent: 'bg-amber-50', hover: 'hover:border-amber-200' },
   { key: 'desempenho', emoji: '📈', titulo: 'Desempenho', desc: 'Visualizações, ligações, rotas e cliques', pronto: true, accent: 'bg-green-50', hover: 'hover:border-green-200' },
-  { key: 'recomendacoes', emoji: '✨', titulo: 'Recomendações IA', desc: 'Análise do perfil com plano de ação', pronto: true, accent: 'bg-purple-50', hover: 'hover:border-purple-200' },
+  { key: 'recomendacoes', emoji: '🩺', titulo: 'Auditoria', desc: 'Nota do perfil, checklist e plano de ação da IA', pronto: true, accent: 'bg-purple-50', hover: 'hover:border-purple-200' },
   { key: 'concorrentes', emoji: '🔍', titulo: 'Concorrentes', desc: 'Compare seu perfil com a concorrência', pronto: true, accent: 'bg-orange-50', hover: 'hover:border-orange-200' },
   { key: 'rank', emoji: '🎯', titulo: 'Rank no Mapa', desc: 'Sua posição no Maps por palavra-chave (SerpApi)', pronto: true, accent: 'bg-teal-50', hover: 'hover:border-teal-200' },
   { key: 'postagens', emoji: '📣', titulo: 'Postagens', desc: 'Criar e agendar postagens no perfil', pronto: false, accent: 'bg-gray-100', hover: '' },
@@ -241,7 +241,7 @@ function GoogleInner() {
           {ativo && modal === 'perfil' && <LocationProfilePanel id={ativo.id} />}
           {ativo && modal === 'avaliacoes' && <ReviewsPanel id={ativo.id} />}
           {ativo && modal === 'desempenho' && <PerformancePanel id={ativo.id} />}
-          {ativo && modal === 'recomendacoes' && <RecommendationsPanel id={ativo.id} />}
+          {ativo && modal === 'recomendacoes' && <AuditPanel id={ativo.id} />}
           {ativo && modal === 'concorrentes' && <CompetitorsPanel id={ativo.id} />}
           {ativo && modal === 'rank' && <RankPanel id={ativo.id} />}
         </Modal>
