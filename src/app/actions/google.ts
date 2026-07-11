@@ -449,6 +449,67 @@ export async function rankNoMapa(id: string, query: string): Promise<Result<MapR
   }
 }
 
+// ── Grade de Rank (heatmap via SerpApi) ────────────────────────────────────────
+
+export type GridPoint = { row: number; col: number; position: number | null }
+export type GridRankResult = {
+  query: string; size: number; points: GridPoint[]
+  encontrados: number; total: number; media: number | null; cidade: string | null
+}
+
+export async function gridRank(id: string, query: string, size = 3): Promise<Result<GridRankResult> & { naoConfigurado?: boolean }> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  if (!serpapiConfigured()) {
+    return { success: false, error: 'A chave do SerpApi (SERPAPI_KEY) ainda não foi configurada no servidor.', naoConfigurado: true }
+  }
+  const termo = query.trim()
+  if (!termo) return { success: false, error: 'Digite uma palavra-chave.' }
+  const n = size === 5 ? 5 : 3
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+    const det = await getLocationDetails(token, row.locationName)
+    if (det.lat == null || det.lng == null) {
+      return { success: false, error: 'O perfil não tem coordenadas para montar o mapa de rank.' }
+    }
+
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+    const alvo = norm(det.title)
+    const spacingKm = 1.5
+    const dLat = spacingKm / 111
+    const dLng = spacingKm / (111 * Math.cos((det.lat * Math.PI) / 180))
+    const mid = (n - 1) / 2
+
+    const coords: { row: number; col: number; lat: number; lng: number }[] = []
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+      coords.push({ row: r, col: c, lat: det.lat + (mid - r) * dLat, lng: det.lng + (c - mid) * dLng })
+    }
+
+    const points = await Promise.all(coords.map(async pt => {
+      try {
+        const items = await searchMapsRank({ query: termo, lat: pt.lat, lng: pt.lng })
+        const found = items.find(it => (row.placeId && it.placeId === row.placeId) || norm(it.title) === alvo)
+        return { row: pt.row, col: pt.col, position: found ? found.position : null }
+      } catch {
+        return { row: pt.row, col: pt.col, position: null }
+      }
+    }))
+
+    const achados = points.filter(p => p.position != null) as { position: number }[]
+    const media = achados.length ? achados.reduce((a, p) => a + p.position, 0) / achados.length : null
+
+    return {
+      success: true,
+      data: { query: termo, size: n, points, encontrados: achados.length, total: n * n, media, cidade: det.city },
+    }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao montar o mapa de rank' }
+  }
+}
+
 // ── Avaliações (API v4) ────────────────────────────────────────────────────────
 
 async function reviewLocation(id: string) {
