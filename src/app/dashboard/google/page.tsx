@@ -13,8 +13,9 @@ import { RecommendationsPanel } from '@/components/google/RecommendationsPanel'
 import { PerformancePanel } from '@/components/google/PerformancePanel'
 import { CompetitorsPanel } from '@/components/google/CompetitorsPanel'
 import { ReviewsPanel } from '@/components/google/ReviewsPanel'
+import { RankPanel } from '@/components/google/RankPanel'
 
-type FeatureKey = 'perfil' | 'avaliacoes' | 'desempenho' | 'recomendacoes' | 'concorrentes' | 'postagens'
+type FeatureKey = 'perfil' | 'avaliacoes' | 'desempenho' | 'recomendacoes' | 'concorrentes' | 'rank' | 'postagens'
 
 const FEATURES: {
   key: FeatureKey; emoji: string; titulo: string; desc: string; pronto: boolean; accent: string; hover: string
@@ -24,6 +25,7 @@ const FEATURES: {
   { key: 'desempenho', emoji: '📈', titulo: 'Desempenho', desc: 'Visualizações, ligações, rotas e cliques', pronto: true, accent: 'bg-green-50', hover: 'hover:border-green-200' },
   { key: 'recomendacoes', emoji: '✨', titulo: 'Recomendações IA', desc: 'Análise do perfil com plano de ação', pronto: true, accent: 'bg-purple-50', hover: 'hover:border-purple-200' },
   { key: 'concorrentes', emoji: '🔍', titulo: 'Concorrentes', desc: 'Compare seu perfil com a concorrência', pronto: true, accent: 'bg-orange-50', hover: 'hover:border-orange-200' },
+  { key: 'rank', emoji: '🎯', titulo: 'Rank no Mapa', desc: 'Sua posição no Maps por palavra-chave (SerpApi)', pronto: true, accent: 'bg-teal-50', hover: 'hover:border-teal-200' },
   { key: 'postagens', emoji: '📣', titulo: 'Postagens', desc: 'Criar e agendar postagens no perfil', pronto: false, accent: 'bg-gray-100', hover: '' },
 ]
 
@@ -241,6 +243,7 @@ function GoogleInner() {
           {ativo && modal === 'desempenho' && <PerformancePanel id={ativo.id} />}
           {ativo && modal === 'recomendacoes' && <RecommendationsPanel id={ativo.id} />}
           {ativo && modal === 'concorrentes' && <CompetitorsPanel id={ativo.id} />}
+          {ativo && modal === 'rank' && <RankPanel id={ativo.id} />}
         </Modal>
       </div>
     </div>

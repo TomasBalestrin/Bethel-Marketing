@@ -14,11 +14,13 @@ import { analyzeProfile } from '@/lib/google/recommendations'
 import { getPerformance } from '@/lib/google/performance'
 import { placesConfigured, getPlaceById, searchCompetitors, type Competitor } from '@/lib/google/competitors'
 import { listReviews, replyToReview, draftReply } from '@/lib/google/reviews'
+import { serpapiConfigured, searchMapsRank, type MapRankItem } from '@/lib/google/rankmaps'
 
 export type { GbpLocationDetails, GbpCategory } from '@/lib/google/business'
 export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
 export type { PerfResult, PerfMetric } from '@/lib/google/performance'
 export type { GbpReview, ReviewsResult } from '@/lib/google/reviews'
+export type { MapRankItem } from '@/lib/google/rankmaps'
 
 type Result<T = void> =
   | { success: true; data: T }
@@ -402,6 +404,37 @@ export async function getLocationCompetitors(id: string): Promise<Result<Competi
     return { success: true, data: { self, lista, categoria, cidade } }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao buscar concorrentes' }
+  }
+}
+
+// ── Rank no Mapa (SerpApi) ─────────────────────────────────────────────────────
+
+export type MapRankResult = { query: string; items: MapRankItem[]; minhaPosicao: number | null; cidade: string | null }
+
+export async function rankNoMapa(id: string, query: string): Promise<Result<MapRankResult> & { naoConfigurado?: boolean }> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  if (!serpapiConfigured()) {
+    return { success: false, error: 'A chave do SerpApi (SERPAPI_KEY) ainda não foi configurada no servidor.', naoConfigurado: true }
+  }
+  const termo = query.trim()
+  if (!termo) return { success: false, error: 'Digite uma palavra-chave.' }
+  try {
+    const row = await prisma.gbpLocation.findUnique({ where: { id } })
+    if (!row || row.userId !== dbUser.id) return { success: false, error: 'Perfil não encontrado' }
+    const token = await getValidAccessToken(dbUser.id)
+    if (!token) return { success: false, error: 'Conta Google não conectada' }
+
+    const det = await getLocationDetails(token, row.locationName)
+    const items = await searchMapsRank({ query: termo, lat: det.lat, lng: det.lng })
+
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+    const alvo = norm(det.title)
+    const idx = items.findIndex(it => (row.placeId && it.placeId === row.placeId) || norm(it.title) === alvo)
+
+    return { success: true, data: { query: termo, items, minhaPosicao: idx >= 0 ? idx + 1 : null, cidade: det.city } }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao consultar o rank' }
   }
 }
 
