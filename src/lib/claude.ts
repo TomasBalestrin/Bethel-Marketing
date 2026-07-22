@@ -148,12 +148,17 @@ export async function generateSiteHTML(data: SiteData): Promise<string> {
   }
   const depoimentosItens = data.depoimentos
     .map(d => {
-      const embed = d.videoUrl && d.videoUrl.trim() ? instagramEmbedUrl(d.videoUrl.trim()) : null
-      if (embed) return { tipo: 'video' as const, src: embed }
+      const v = d.videoUrl?.trim()
+      if (v) {
+        // vídeo hospedado por nós (arquivo) -> player nativo; link do Instagram -> embed
+        if (!/instagram\.com/i.test(v)) return { tipo: 'arquivo' as const, src: v }
+        const embed = instagramEmbedUrl(v)
+        if (embed) return { tipo: 'video' as const, src: embed }
+      }
       if (d.imagemUrl && d.imagemUrl.trim()) return { tipo: 'imagem' as const, src: d.imagemUrl }
       return null
     })
-    .filter((x): x is { tipo: 'video' | 'imagem'; src: string } => x !== null)
+    .filter((x): x is { tipo: 'video' | 'imagem' | 'arquivo'; src: string } => x !== null)
   const resultadosImagens = data.resultados.map(r => r.imagemUrl)
 
   // Aceita 1 ou vários @ (ex: 2 profissionais), separados por vírgula/espaço/;
@@ -212,7 +217,9 @@ ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0
 ${depoimentosItens.length > 0 ? `DEPOIMENTOS (${depoimentosItens.length} itens na ordem — cada um é IMAGEM ou VÍDEO DO INSTAGRAM, respeite o tipo):
 ${depoimentosItens.map((it, i) => it.tipo === 'video'
   ? `• Depoimento ${i + 1}: VÍDEO DO INSTAGRAM — incorpore com <iframe src="${it.src}"> (NÃO use <img>)`
-  : `• Depoimento ${i + 1}: IMAGEM (print) — use como <img src="${it.src}">`).join('\n')}` : ''}
+  : it.tipo === 'arquivo'
+    ? `• Depoimento ${i + 1}: VÍDEO EM ARQUIVO — use <video src="${it.src}"> com controles (NÃO use <iframe> nem <img>)`
+    : `• Depoimento ${i + 1}: IMAGEM (print) — use como <img src="${it.src}">`).join('\n')}` : ''}
 ${resultadosImagens.length > 0 ? `RESULTADOS REAIS (imagens — use as URLs exatamente):
 ${resultadosImagens.map((url, i) => `• Resultado ${i + 1}: ${url}`).join('\n')}` : ''}
 
@@ -267,7 +274,8 @@ ESTILO DO HEADER (obrigatório): o <header> deve ter EXATAMENTE background:${hea
 5. ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0 ? `<section id="espaco"> — título e subtítulo CENTRALIZADOS, galeria com as fotos do negócio. LAYOUT OBRIGATÓRIO: no mobile (padrão, sem @media) as fotos devem ficar em coluna única, cada uma ocupando 100% da largura (display:flex; flex-direction:column; gap:16px). No desktop (@media min-width:768px) pode usar grid de 2 ou 3 colunas. Cada foto: width:100%; height:auto; object-fit:contain; border-radius:12px — mostre a imagem INTEIRA, sem cortar (NÃO use aspect-ratio fixo nem object-fit:cover na galeria). Use as URLs exatas fornecidas.` : '<!-- sem galeria de fotos -->'}
 6. ${depoimentosItens.length > 0 ? `<section id="depoimentos"> — título e subtítulo CENTRALIZADOS, carrossel com os ${depoimentosItens.length} depoimentos fornecidos (podem ser IMAGENS/prints e/ou VÍDEOS do Instagram, misturados na MESMA ordem em que aparecem na lista DEPOIMENTOS). Cada slide contém UM item:
   - Se o item for IMAGEM (print): <img> com estes estilos EXATOS: display:block; margin:0 auto; width:auto; max-width:100%; max-height:480px; height:auto; object-fit:contain; border-radius:12px. O teto de altura (max-height:480px) é OBRIGATÓRIO para os prints não ficarem gigantes.
-  - Se o item for VÍDEO DO INSTAGRAM: use um <iframe> com a URL de embed fornecida, com estes estilos EXATOS: display:block; margin:0 auto; width:100%; max-width:400px; height:580px; border:0; border-radius:12px; background:#fff; e os atributos scrolling="no" allowtransparency="true" allowfullscreen. NUNCA use <img> para vídeo. O vídeo do Instagram fica incorporado e o visitante dá play ali mesmo.
+  - Se o item for VÍDEO DO INSTAGRAM: use um <iframe> com a URL de embed fornecida, com estes estilos EXATOS: display:block; margin:0 auto; width:100%; max-width:400px; height:580px; border:0; border-radius:12px; background:#fff; e os atributos scrolling="no" allowtransparency="true" allowfullscreen. NUNCA use <img> para vídeo.
+  - Se o item for VÍDEO EM ARQUIVO: use <video src="URL" controls playsinline preload="metadata" style="display:block; margin:0 auto; width:100%; max-width:400px; max-height:580px; height:auto; border-radius:12px; background:#000"></video>. NUNCA use <iframe> nem <img> nesse caso. Esse vídeo toca dentro do site, sem levar o visitante embora.
   O carrossel deve ter um wrapper externo com position:relative; max-width:440px; margin:0 auto; padding:0 48px (para reservar espaço lateral às setas) — largura menor porque depoimentos costumam ser verticais. As setas prev/next devem ser position:absolute; top:50%; transform:translateY(-50%) FORA do conteúdo, posicionadas no padding lateral: left:0 e right:0 com width:40px; height:40px. O item (img ou iframe) fica dentro de um container interno sem padding, centralizado. Assim as setas ficam ao lado, nunca sobre o conteúdo. Adicione indicadores de pontos abaixo. Carrossel responsivo e touch-friendly.` : '<!-- sem depoimentos -->'}
 ${resultadosImagens.length > 0 ? `6b. <section id="resultados"> (coloque ANTES da seção de contato #cta) — título e subtítulo CENTRALIZADOS, ex título "Resultados reais" / "Veja na prática". GALERIA com as ${resultadosImagens.length} imagens fornecidas (fotos de produtos, serviços e antes/depois). LAYOUT: no mobile (padrão) coluna única com gap:16px; no desktop (@media min-width:768px) grid de 2 ou 3 colunas com gap:20px. Cada imagem: width:100%; height:auto; object-fit:contain; background:#f7f7f7; border-radius:12px; display:block — mostre a imagem INTEIRA, SEM cortar. Use as URLs EXATAS fornecidas.` : '<!-- sem resultados -->'}
 7. <section id="cta"> — estrutura obrigatória em duas partes dentro de um container (max-width:600px; margin:0 auto; text-align:center):

@@ -16,6 +16,26 @@ async function uploadFoto(file: File): Promise<string | null> {
   return data.url ?? null
 }
 
+// Vídeo vai DIRETO do navegador para o armazenamento (arquivo grande não passa
+// pelo servidor). Retorna a URL pública ou uma mensagem de erro.
+async function uploadVideo(file: File): Promise<{ url?: string; erro?: string }> {
+  const prep = await fetch('/api/upload/video', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename: file.name, contentType: file.type, size: file.size }),
+  })
+  const info = await prep.json().catch(() => ({}))
+  if (!prep.ok || !info.signedUrl) return { erro: info.error ?? 'Não foi possível preparar o envio.' }
+
+  const put = await fetch(info.signedUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'content-type': file.type || 'video/mp4' },
+  })
+  if (!put.ok) return { erro: 'Falha ao enviar o vídeo. Tente novamente.' }
+  return { url: info.publicUrl }
+}
+
 function FotoUpload({
   value,
   onChange,
@@ -108,7 +128,22 @@ function DepoimentoImagem({ index, onRemove }: { index: number; onRemove: () => 
 }
 
 function DepoimentoVideo({ index, onRemove }: { index: number; onRemove: () => void }) {
-  const { register } = useFormContext<FormData>()
+  const { register, watch, setValue } = useFormContext<FormData>()
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro] = useState('')
+  const url = watch(`depoimentos.${index}.videoUrl`) ?? ''
+  const ehArquivo = Boolean(url) && !/instagram\.com/i.test(url)
+
+  async function enviarArquivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setEnviando(true); setErro('')
+    const res = await uploadVideo(file)
+    if (res.url) setValue(`depoimentos.${index}.videoUrl`, res.url)
+    else setErro(res.erro ?? 'Erro no envio')
+    setEnviando(false)
+  }
+
   return (
     <div className="relative rounded-lg border border-gray-200 bg-gray-50 p-2.5 flex flex-col justify-center gap-1.5 aspect-square">
       <button type="button" onClick={onRemove}
@@ -117,14 +152,32 @@ function DepoimentoVideo({ index, onRemove }: { index: number; onRemove: () => v
       </button>
       <div className="flex items-center gap-1.5 text-gray-500">
         <Video className="w-4 h-4" />
-        <span className="text-xs font-medium">Vídeo do Instagram</span>
+        <span className="text-xs font-medium">Vídeo</span>
       </div>
-      <Input
-        {...register(`depoimentos.${index}.videoUrl`)}
-        placeholder="Cole o link do reel/post"
-        className="text-xs h-8"
-      />
-      <p className="text-[10px] text-gray-400 leading-tight">Ex: instagram.com/reel/... (perfil público)</p>
+
+      {ehArquivo ? (
+        <>
+          <video src={url} className="w-full rounded max-h-[70px] bg-black" preload="metadata" />
+          <p className="text-[10px] text-green-600 leading-tight">✅ Vídeo enviado (toca no site)</p>
+          <button type="button" onClick={() => setValue(`depoimentos.${index}.videoUrl`, '')}
+            className="text-[10px] text-gray-400 hover:underline">trocar</button>
+        </>
+      ) : (
+        <>
+          <Input
+            {...register(`depoimentos.${index}.videoUrl`)}
+            placeholder="Cole o link do Instagram"
+            className="text-xs h-8"
+          />
+          <label className="text-[10px] text-blue-600 hover:underline cursor-pointer">
+            {enviando ? 'Enviando vídeo...' : 'ou enviar arquivo (MP4, até 60MB)'}
+            <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden"
+              onChange={enviarArquivo} disabled={enviando} />
+          </label>
+          {erro && <p className="text-[10px] text-red-500 leading-tight">{erro}</p>}
+          <p className="text-[10px] text-gray-400 leading-tight">Arquivo toca no site. Link do Instagram pode abrir o app (Reels).</p>
+        </>
+      )}
     </div>
   )
 }
@@ -291,7 +344,7 @@ export default function StepCredibilidade() {
                 className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
               >
                 <Video className="w-3.5 h-3.5" />
-                Vídeo do Instagram
+                Vídeo
               </Button>
             </div>
           )}
