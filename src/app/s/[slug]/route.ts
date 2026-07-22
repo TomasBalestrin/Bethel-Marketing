@@ -63,6 +63,18 @@ const RESULTADOS_CAROUSEL_JS =
   "outer.addEventListener('touchend',function(e){if(sx===null)return;var dx=sx-e.changedTouches[0].clientX;if(Math.abs(dx)>40){goTo(dx>0?current+1:current-1);}sx=null;});" +
   '})();</script>'
 
+// Sites em que a barra do topo NÃO deve seguir a cor da logo (ex: logo escura e
+// transparente que some no fundo escuro). Chave = slug, valor = cor da barra.
+const HEADER_BG_OVERRIDE: Record<string, string> = {
+  'marmoraria-beto': '#ffffff',
+}
+
+function hexEhClaro(hex: string): boolean {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16)
+  return 0.299 * r + 0.587 * g + 0.114 * b > 160
+}
+
 // Lê a cor de FUNDO real da logo amostrando os cantos da imagem (o fundo).
 // Retorna { hex, light } ou null se a logo for transparente/erro.
 async function logoBgColor(logoUrl: string): Promise<{ hex: string; light: boolean } | null> {
@@ -143,7 +155,17 @@ export async function GET(
   // 3) botão CTA centralizado.
   if (html.includes('</head>')) {
     let headerRule = ''
-    if (site.logoUrl) {
+    const barraForcada = HEADER_BG_OVERRIDE[slug]
+    if (barraForcada) {
+      // Exceção por site: logo escura/transparente que sumia no fundo escuro da barra.
+      // Força só o HEADER (o rodapé segue como está).
+      const claro = hexEhClaro(barraForcada)
+      const txt = claro ? '#1a1a1a' : '#ffffff'
+      headerRule =
+        `header,header .header-inner{background:${barraForcada} !important;background-image:none !important}` +
+        `header a,header nav a,header .menu-btn,header button{color:${txt} !important}` +
+        (claro ? 'header{border-bottom:1px solid rgba(0,0,0,0.08) !important}' : '')
+    } else if (site.logoUrl) {
       const bg = await logoBgColor(site.logoUrl)
       if (bg) {
         // Barra = cor REAL do fundo da logo (combina com o entorno da logo)
