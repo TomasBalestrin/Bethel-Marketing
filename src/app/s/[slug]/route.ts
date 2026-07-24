@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { CANONICAL_DOMAIN } from '@/lib/canonical'
 
 function injectTracking(html: string, metaPixelId?: string | null, gtmId?: string | null): string {
   let result = html
@@ -135,6 +136,18 @@ export async function GET(
   }
 
   let html = injectTracking(site.htmlGerado, site.metaPixelId, site.gtmId)
+
+  // Site com domínio próprio: troca as autorreferências ao subdomínio da
+  // plataforma (canonical, og:url, schema) pelo endereço oficial, para o Google
+  // indexar só um endereço.
+  const canonical = CANONICAL_DOMAIN[slug]
+  if (canonical) {
+    const appDomain = process.env.MENTOR_DOMAIN
+      || (process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).hostname : null)
+    if (appDomain) {
+      html = html.split(`https://${slug}.${appDomain}`).join(canonical)
+    }
+  }
 
   // Remove o card de estatística com o registro profissional (CRO etc.) da seção Sobre,
   // mantendo o registro apenas no rodapé. Só mexe em <div class="...stat...">.

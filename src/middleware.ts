@@ -1,5 +1,6 @@
 import { createServerClient, type SetAllCookies } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { CANONICAL_DOMAIN } from '@/lib/canonical'
 
 // Domínios próprios (custom) que servem um site já publicado na plataforma.
 // Chave = host completo, valor = slug do site. Para funcionar, o DNS do domínio
@@ -13,9 +14,18 @@ export async function middleware(request: NextRequest) {
   // Serve client sites via subdomain (e.g. clinic.bethelapps.com)
   const hostname = (request.headers.get('host') ?? '').toLowerCase()
 
+  const destino = (canonical: string) =>
+    new URL(request.nextUrl.pathname + request.nextUrl.search, canonical)
+
   // Domínio próprio (ex: itils.com.br) apontando para um site da plataforma
   const customSlug = CUSTOM_DOMAINS[hostname]
   if (customSlug) {
+    // se o site tem endereço oficial e o acesso veio por outra variação
+    // (ex: sem www), manda para o oficial — evita duplicado no Google
+    const canonical = CANONICAL_DOMAIN[customSlug]
+    if (canonical && hostname !== new URL(canonical).host) {
+      return NextResponse.redirect(destino(canonical), 301)
+    }
     return NextResponse.rewrite(new URL(`/s/${customSlug}`, request.url))
   }
 
@@ -25,6 +35,9 @@ export async function middleware(request: NextRequest) {
   if (appDomain && hostname.endsWith(`.${appDomain}`)) {
     const slug = hostname.slice(0, hostname.length - appDomain.length - 1)
     if (slug && slug !== 'www') {
+      // site com domínio próprio: o subdomínio da plataforma redireciona para o oficial
+      const canonical = CANONICAL_DOMAIN[slug]
+      if (canonical) return NextResponse.redirect(destino(canonical), 301)
       return NextResponse.rewrite(new URL(`/s/${slug}`, request.url))
     }
   }
