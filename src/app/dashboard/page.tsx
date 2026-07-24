@@ -13,6 +13,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { CopyButton } from '@/components/CopyButton'
+import { DeleteSiteButton } from '@/components/DeleteSiteButton'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -123,6 +124,12 @@ export default async function DashboardPage() {
                         </Link>
                       </Button>
                     )}
+
+                    <DeleteSiteButton
+                      siteId={site.id}
+                      nome={site.nomeNegocio}
+                      publicado={site.status === 'PUBLISHED'}
+                    />
                   </div>
                 </CardContent>
               </Card>

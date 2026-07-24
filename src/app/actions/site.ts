@@ -256,6 +256,39 @@ export async function removeSite(siteId: string): Promise<Result> {
   return { success: true, data: undefined }
 }
 
+// Exclui o site DEFINITIVAMENTE (registro + relações em cascata) e, se houver,
+// o projeto no Vercel. Se estiver publicado, o endereço sai do ar.
+export async function deleteSite(siteId: string): Promise<Result> {
+  const user = await getAuthUser()
+  if (!user) return { success: false, error: 'Não autorizado' }
+
+  const site = await prisma.site.findUnique({ where: { id: siteId } })
+  if (!site) return { success: false, error: 'Site não encontrado' }
+
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+  const isAdmin = dbUser?.role === 'ADMIN'
+  if (!isAdmin && site.userId !== user.id) return { success: false, error: 'Acesso negado' }
+
+  if (site.vercelProjectId) {
+    try {
+      await deleteVercelProject(site.vercelProjectId)
+    } catch (e) {
+      console.warn('Aviso: não foi possível deletar projeto no Vercel', e)
+    }
+  }
+
+  try {
+    await prisma.site.delete({ where: { id: siteId } })
+  } catch (e) {
+    console.error('deleteSite error:', e)
+    return { success: false, error: 'Erro ao excluir o site' }
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/admin')
+  return { success: true, data: undefined }
+}
+
 export async function saveRastreamento(siteId: string, data: {
   metaPixelId?: string
   metaPixelToken?: string
