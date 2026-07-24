@@ -137,6 +137,9 @@ export async function GET(
 
   let html = injectTracking(site.htmlGerado, site.metaPixelId, site.gtmId)
 
+  // Botão de CTA sem exclamação (vale para todos os sites já publicados)
+  html = html.split('Entrar em contato agora!').join('Entrar em contato agora')
+
   // Site com domínio próprio: troca as autorreferências ao subdomínio da
   // plataforma (canonical, og:url, schema) pelo endereço oficial, para o Google
   // indexar só um endereço.
