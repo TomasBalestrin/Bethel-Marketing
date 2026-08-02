@@ -16,6 +16,7 @@ import { placesConfigured, getPlaceById, getPlaceLatLng, searchCompetitors, type
 import { listReviews, replyToReview, draftReply } from '@/lib/google/reviews'
 import { buildAudit, type AuditCheck } from '@/lib/google/audit'
 import { serpapiConfigured, searchMapsRank, searchBusinesses, type MapRankItem, type BusinessHit } from '@/lib/google/rankmaps'
+import { dataforseoConfigured, getSearchVolume } from '@/lib/google/keywords'
 
 export type { GbpLocationDetails, GbpCategory } from '@/lib/google/business'
 export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
@@ -533,18 +534,24 @@ export async function buscarNegocios(nome: string): Promise<Result<BusinessHit[]
   }
 }
 
-export async function sugerirPalavras(category: string, cidade: string): Promise<Result<string[]>> {
+export type PalavraSugerida = { keyword: string; volume: number | null }
+
+export async function sugerirPalavras(category: string, cidade: string): Promise<Result<PalavraSugerida[]>> {
   const dbUser = await getDbUser()
   if (!dbUser) return { success: false, error: 'Não autorizado' }
   try {
     const kws = await suggestKeywords(category, cidade)
-    return { success: true, data: kws }
+    let volumes: Record<string, number | null> = {}
+    if (dataforseoConfigured() && kws.length) {
+      try { volumes = await getSearchVolume(kws) } catch { /* volume é opcional */ }
+    }
+    return { success: true, data: kws.map(k => ({ keyword: k, volume: volumes[k.toLowerCase()] ?? null })) }
   } catch {
     return { success: true, data: [] } // sugestão é opcional; falha não bloqueia
   }
 }
 
-export type AnaliseMercadoResult = { keyword: string; minhaPosicao: number | null; ranking: MapRankItem[] }
+export type AnaliseMercadoResult = { keyword: string; volume: number | null; minhaPosicao: number | null; ranking: MapRankItem[] }
 
 export async function analisarMercado(input: {
   keyword: string; lat?: number | null; lng?: number | null; placeId?: string | null; title: string
@@ -560,7 +567,11 @@ export async function analisarMercado(input: {
     const alvo = norm(input.title)
     const idx = items.findIndex(it => (input.placeId && it.placeId === input.placeId) || norm(it.title) === alvo)
     const ranking = items.map((it, i) => ({ ...it, position: i + 1 }))
-    return { success: true, data: { keyword, minhaPosicao: idx >= 0 ? idx + 1 : null, ranking } }
+    let volume: number | null = null
+    if (dataforseoConfigured()) {
+      try { volume = (await getSearchVolume([keyword]))[keyword.toLowerCase()] ?? null } catch { /* opcional */ }
+    }
+    return { success: true, data: { keyword, volume, minhaPosicao: idx >= 0 ? idx + 1 : null, ranking } }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao analisar o ranking' }
   }

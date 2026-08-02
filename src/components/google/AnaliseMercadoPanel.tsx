@@ -3,10 +3,15 @@
 import { useState } from 'react'
 import {
   buscarNegocios, sugerirPalavras, analisarMercado,
-  type BusinessHit, type AnaliseMercadoResult,
+  type BusinessHit, type AnaliseMercadoResult, type PalavraSugerida,
 } from '@/app/actions/google'
 
 function fmt(n: number): string { return n.toLocaleString('pt-BR') }
+function volTxt(v: number | null): string {
+  if (v == null) return ''
+  if (v >= 1000) return `${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil/mês`
+  return `${v}/mês`
+}
 function cidadeDe(address: string | null): string {
   if (!address) return ''
   const partes = address.split(' - ')
@@ -17,7 +22,7 @@ export function AnaliseMercadoPanel() {
   const [nome, setNome] = useState('')
   const [candidatos, setCandidatos] = useState<BusinessHit[] | null>(null)
   const [selecionado, setSelecionado] = useState<BusinessHit | null>(null)
-  const [sugestoes, setSugestoes] = useState<string[]>([])
+  const [sugestoes, setSugestoes] = useState<PalavraSugerida[]>([])
   const [keyword, setKeyword] = useState('')
   const [resultado, setResultado] = useState<AnaliseMercadoResult | null>(null)
 
@@ -98,9 +103,9 @@ export function AnaliseMercadoPanel() {
           {sugestoes.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {sugestoes.map(s => (
-                <button key={s} onClick={() => analisar(s)}
+                <button key={s.keyword} onClick={() => analisar(s.keyword)}
                   className="text-[11px] px-2.5 py-1 rounded-full border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100">
-                  {s}
+                  {s.keyword}{s.volume != null && <span className="text-blue-400"> · {volTxt(s.volume)}</span>}
                 </button>
               ))}
             </div>
@@ -128,6 +133,9 @@ export function AnaliseMercadoPanel() {
       {resultado && (
         <div className="space-y-3">
           <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-100 rounded-lg p-3">
+            {resultado.volume != null && (
+              <p className="text-[11px] text-gray-500 mb-1">🔎 <b>{resultado.keyword}</b> tem cerca de <b>{volTxt(resultado.volume)}</b> de buscas no Google.</p>
+            )}
             {resultado.minhaPosicao != null ? (
               <p className="text-sm text-gray-700">
                 <b>{selecionado?.title}</b> está em <b className="text-blue-700">{resultado.minhaPosicao}º lugar</b> para <b>{resultado.keyword}</b>.
