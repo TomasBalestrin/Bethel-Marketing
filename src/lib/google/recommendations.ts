@@ -82,6 +82,29 @@ function parseAnalysis(text: string): GbpAnalysis {
   return { recomendacoes, rotina }
 }
 
+// Sugestões de palavras-chave que clientes digitam no Google para achar o negócio.
+export async function suggestKeywords(category: string, cidade: string): Promise<string[]> {
+  const system = `Você sugere palavras-chave que clientes DIGITAM no Google/Maps para encontrar um negócio local. Responda APENAS com um array JSON de 8 termos curtos (2 a 4 palavras cada), em português do Brasil, específicos ao tipo de negócio, SEM incluir o nome da cidade no termo. Sem markdown, sem texto fora do JSON.`
+  const user = `Tipo de negócio: ${category || 'negócio local'}. Cidade de referência: ${cidade || '(não informada)'}. Gere as palavras-chave.`
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 400,
+    system: [{ type: 'text', text: system }],
+    messages: [{ role: 'user', content: user }],
+  })
+  const content = message.content[0]
+  if (content.type !== 'text') return []
+  const t = content.text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '')
+  const s = t.indexOf('['), e = t.lastIndexOf(']')
+  if (s === -1 || e === -1) return []
+  try {
+    const arr = JSON.parse(t.slice(s, e + 1)) as unknown[]
+    return arr.map(x => String(x).trim()).filter(Boolean).slice(0, 8)
+  } catch {
+    return []
+  }
+}
+
 export async function analyzeProfile(det: GbpLocationDetails): Promise<GbpAnalysis> {
   const horarios = det.regularHours.length
     ? det.regularHours.map(p => `${p.openDay} ${p.openTime}-${p.closeTime}`).join('; ')

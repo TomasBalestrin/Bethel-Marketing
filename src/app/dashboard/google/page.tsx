@@ -14,8 +14,9 @@ import { PerformancePanel } from '@/components/google/PerformancePanel'
 import { CompetitorsPanel } from '@/components/google/CompetitorsPanel'
 import { ReviewsPanel } from '@/components/google/ReviewsPanel'
 import { RankPanel } from '@/components/google/RankPanel'
+import { AnaliseMercadoPanel } from '@/components/google/AnaliseMercadoPanel'
 
-type FeatureKey = 'perfil' | 'avaliacoes' | 'desempenho' | 'recomendacoes' | 'concorrentes' | 'rank' | 'postagens'
+type FeatureKey = 'perfil' | 'avaliacoes' | 'desempenho' | 'recomendacoes' | 'concorrentes' | 'rank' | 'mercado' | 'postagens'
 
 const FEATURES: {
   key: FeatureKey; emoji: string; titulo: string; desc: string; pronto: boolean; accent: string; hover: string
@@ -26,6 +27,7 @@ const FEATURES: {
   { key: 'recomendacoes', emoji: '🩺', titulo: 'Auditoria', desc: 'Nota do perfil, checklist e plano de ação da IA', pronto: true, accent: 'bg-purple-50', hover: 'hover:border-purple-200' },
   { key: 'concorrentes', emoji: '🔍', titulo: 'Concorrentes', desc: 'Compare seu perfil com a concorrência', pronto: true, accent: 'bg-orange-50', hover: 'hover:border-orange-200' },
   { key: 'rank', emoji: '🎯', titulo: 'Rank no Mapa', desc: 'Sua posição no Maps por palavra-chave (SerpApi)', pronto: true, accent: 'bg-teal-50', hover: 'hover:border-teal-200' },
+  { key: 'mercado', emoji: '🔎', titulo: 'Análise Mercado', desc: 'Rank de qualquer negócio + concorrentes por palavra-chave', pronto: true, accent: 'bg-indigo-50', hover: 'hover:border-indigo-200' },
   { key: 'postagens', emoji: '📣', titulo: 'Postagens', desc: 'Criar e agendar postagens no perfil', pronto: false, accent: 'bg-gray-100', hover: '' },
 ]
 
@@ -244,6 +246,7 @@ function GoogleInner() {
           {ativo && modal === 'recomendacoes' && <AuditPanel id={ativo.id} />}
           {ativo && modal === 'concorrentes' && <CompetitorsPanel id={ativo.id} />}
           {ativo && modal === 'rank' && <RankPanel id={ativo.id} />}
+          {ativo && modal === 'mercado' && <AnaliseMercadoPanel />}
         </Modal>
       </div>
     </div>

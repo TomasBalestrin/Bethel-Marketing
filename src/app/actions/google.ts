@@ -10,19 +10,19 @@ import {
   type GbpLocationDetails, type GbpCategory,
 } from '@/lib/google/business'
 
-import { analyzeProfile } from '@/lib/google/recommendations'
+import { analyzeProfile, suggestKeywords } from '@/lib/google/recommendations'
 import { getPerformance, getSearchKeywords } from '@/lib/google/performance'
 import { placesConfigured, getPlaceById, getPlaceLatLng, searchCompetitors, type Competitor } from '@/lib/google/competitors'
 import { listReviews, replyToReview, draftReply } from '@/lib/google/reviews'
 import { buildAudit, type AuditCheck } from '@/lib/google/audit'
-import { serpapiConfigured, searchMapsRank, type MapRankItem } from '@/lib/google/rankmaps'
+import { serpapiConfigured, searchMapsRank, searchBusinesses, type MapRankItem, type BusinessHit } from '@/lib/google/rankmaps'
 
 export type { GbpLocationDetails, GbpCategory } from '@/lib/google/business'
 export type { GbpRecommendation, GbpRoutineItem, GbpAnalysis } from '@/lib/google/recommendations'
 export type { PerfResult, PerfMetric, DailyPoint, SearchKeyword } from '@/lib/google/performance'
 export type { GbpReview, ReviewsResult } from '@/lib/google/reviews'
 export type { AuditCheck } from '@/lib/google/audit'
-export type { MapRankItem } from '@/lib/google/rankmaps'
+export type { MapRankItem, BusinessHit } from '@/lib/google/rankmaps'
 
 type Result<T = void> =
   | { success: true; data: T }
@@ -514,6 +514,55 @@ export async function rankNoMapa(id: string, query: string): Promise<Result<MapR
     return { success: true, data: { query: termo, items, minhaPosicao: idx >= 0 ? idx + 1 : null, cidade: det.city } }
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao consultar o rank' }
+  }
+}
+
+// ── Análise de Mercado (público interno: buscar negócio + rank por palavra) ────
+
+export async function buscarNegocios(nome: string): Promise<Result<BusinessHit[]> & { naoConfigurado?: boolean }> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  if (!serpapiConfigured()) return { success: false, error: 'Chave do SerpApi não configurada.', naoConfigurado: true }
+  const q = nome.trim()
+  if (q.length < 3) return { success: false, error: 'Digite ao menos 3 letras.' }
+  try {
+    const hits = await searchBusinesses(q)
+    return { success: true, data: hits }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao buscar o negócio' }
+  }
+}
+
+export async function sugerirPalavras(category: string, cidade: string): Promise<Result<string[]>> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  try {
+    const kws = await suggestKeywords(category, cidade)
+    return { success: true, data: kws }
+  } catch {
+    return { success: true, data: [] } // sugestão é opcional; falha não bloqueia
+  }
+}
+
+export type AnaliseMercadoResult = { keyword: string; minhaPosicao: number | null; ranking: MapRankItem[] }
+
+export async function analisarMercado(input: {
+  keyword: string; lat?: number | null; lng?: number | null; placeId?: string | null; title: string
+}): Promise<Result<AnaliseMercadoResult> & { naoConfigurado?: boolean }> {
+  const dbUser = await getDbUser()
+  if (!dbUser) return { success: false, error: 'Não autorizado' }
+  if (!serpapiConfigured()) return { success: false, error: 'Chave do SerpApi não configurada.', naoConfigurado: true }
+  const keyword = input.keyword.trim()
+  if (!keyword) return { success: false, error: 'Escolha ou digite uma palavra-chave.' }
+  try {
+    const items = await searchMapsRank({ query: keyword, lat: input.lat, lng: input.lng })
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+    const alvo = norm(input.title)
+    const idx = items.findIndex(it => (input.placeId && it.placeId === input.placeId) || norm(it.title) === alvo)
+    const ranking = items.map((it, i) => ({ ...it, position: i + 1 }))
+    return { success: true, data: { keyword, minhaPosicao: idx >= 0 ? idx + 1 : null, ranking } }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao analisar o ranking' }
   }
 }
 
