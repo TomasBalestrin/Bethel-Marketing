@@ -77,6 +77,9 @@ const HEADER_BG_OVERRIDE: Record<string, string> = {
 // (72px). Chave = slug, valor = altura em px para header/footer.
 const LOGO_HEIGHT_OVERRIDE: Record<string, number> = {
   'mercaz-planejamento': 104,
+  'human-estetic': 104,
+  'marmoraria-beto': 104,
+  'cr-pilates-e-fisioterapia': 100,
 }
 
 function hexEhClaro(hex: string): boolean {
