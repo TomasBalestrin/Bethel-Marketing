@@ -28,7 +28,9 @@ const RESULTADOS_CAROUSEL_CSS =
   '#resultados .brescar-outer{overflow:hidden}' +
   '#resultados .brescar-track{display:flex;transition:transform .35s ease}' +
   '#resultados .brescar-slide{flex:0 0 100%;box-sizing:border-box;display:flex;justify-content:center;align-items:center}' +
-  '#resultados .brescar-slide img{display:block;margin:0 auto;width:auto;max-width:100%;max-height:480px;height:auto;object-fit:contain;border-radius:12px}' +
+  '#resultados .brescar-slide img,#resultados .brescar-slide video{display:block;margin:0 auto;width:auto;max-width:100%;max-height:480px;height:auto;object-fit:contain;border-radius:12px}' +
+  '#resultados .brescar-slide video{background:#000;width:100%}' +
+  '#resultados .brescar-slide iframe{display:block;margin:0 auto;width:100%;max-width:360px;height:520px;border:0;border-radius:12px;background:#fff}' +
   '#resultados .brescar-btn{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;border-radius:50%;cursor:pointer;background:var(--primary,#7d3a3a);color:#fff;font-size:18px;line-height:40px;text-align:center;padding:0;z-index:2}' +
   '#resultados .brescar-btn.prev{left:0}' +
   '#resultados .brescar-btn.next{right:0}' +
@@ -42,9 +44,10 @@ const RESULTADOS_CAROUSEL_JS =
   '<script>(function(){' +
   "var sec=document.getElementById('resultados');" +
   "if(!sec||sec.querySelector('.brescar')||sec.querySelector('.carousel-track'))return;" +
-  "var all=[].slice.call(sec.querySelectorAll('img'));if(all.length<2)return;" +
-  'var best=null,bestN=0;all.forEach(function(im){var p=im.parentElement;var n=p.querySelectorAll(":scope > img").length;if(n>bestN){bestN=n;best=p;}});' +
-  'if(!best||bestN<2)return;var gal=best;var imgs=[].slice.call(gal.querySelectorAll(":scope > img"));' +
+  "var SEL='img,video,iframe';var SELD=':scope > img, :scope > video, :scope > iframe';" +
+  'var all=[].slice.call(sec.querySelectorAll(SEL));if(all.length<2)return;' +
+  'var best=null,bestN=0;all.forEach(function(el){var p=el.parentElement;var n=p.querySelectorAll(SELD).length;if(n>bestN){bestN=n;best=p;}});' +
+  'if(!best||bestN<2)return;var gal=best;var imgs=[].slice.call(gal.querySelectorAll(SELD));' +
   "var wrap=document.createElement('div');wrap.className='brescar';" +
   "var outer=document.createElement('div');outer.className='brescar-outer';" +
   "var track=document.createElement('div');track.className='brescar-track';" +
@@ -68,6 +71,12 @@ const RESULTADOS_CAROUSEL_JS =
 // transparente que some no fundo escuro). Chave = slug, valor = cor da barra.
 const HEADER_BG_OVERRIDE: Record<string, string> = {
   'marmoraria-beto': '#ffffff',
+}
+
+// Sites com logo quadrada/quase-quadrada que fica pequena demais na altura padrão
+// (72px). Chave = slug, valor = altura em px para header/footer.
+const LOGO_HEIGHT_OVERRIDE: Record<string, number> = {
+  'mercaz-planejamento': 104,
 }
 
 function hexEhClaro(hex: string): boolean {
@@ -200,7 +209,9 @@ export async function GET(
           footerBorder
       }
     }
-    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:92px !important;align-items:center !important}header img{height:72px !important;width:auto !important}footer img{height:72px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#espaco img{aspect-ratio:auto !important;height:auto !important;object-fit:contain !important}#servicos img,.service-card img{object-fit:contain !important;height:180px !important;width:100% !important;background:#f7f7f7 !important;padding:8px !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}${RESULTADOS_CAROUSEL_CSS}</style>`
+    const logoHeight = LOGO_HEIGHT_OVERRIDE[slug] ?? 72
+    const minHeaderHeight = Math.max(92, logoHeight + 20)
+    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:${minHeaderHeight}px !important;align-items:center !important}header img{height:${logoHeight}px !important;width:auto !important}footer img{height:${logoHeight}px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#espaco img{aspect-ratio:auto !important;height:auto !important;object-fit:contain !important}#servicos img,.service-card img{object-fit:contain !important;height:180px !important;width:100% !important;background:#f7f7f7 !important;padding:8px !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}${RESULTADOS_CAROUSEL_CSS}</style>`
     html = html.replace('</head>', `${fix}</head>`)
   }
 
