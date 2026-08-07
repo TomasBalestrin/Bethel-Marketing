@@ -8,6 +8,8 @@ import { CANONICAL_DOMAIN } from '@/lib/canonical'
 const CUSTOM_DOMAINS: Record<string, string> = {
   'itils.com.br': 'itils',
   'www.itils.com.br': 'itils',
+  'mercazplanejamento.com.br': 'mercaz-planejamento',
+  'www.mercazplanejamento.com.br': 'mercaz-planejamento',
 }
 
 export async function middleware(request: NextRequest) {

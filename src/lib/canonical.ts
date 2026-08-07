@@ -5,4 +5,5 @@
 // Chave = slug do site, valor = URL oficial (com https e www, se for o caso).
 export const CANONICAL_DOMAIN: Record<string, string> = {
   itils: 'https://www.itils.com.br',
+  'mercaz-planejamento': 'https://www.mercazplanejamento.com.br',
 }
