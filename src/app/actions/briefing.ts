@@ -19,6 +19,7 @@ export type BriefingInput = {
   anosMercado?: string
   clientesAtendidos?: string
   logoUrl?: string
+  fotoProfissionalUrl?: string
   fotosEmpresa?: string[]
   fotosDepoimento?: string[]
   fotosAntesDepois?: string[]
@@ -43,9 +44,10 @@ export async function submitBriefing(input: BriefingInput): Promise<Result> {
         anosMercado: input.anosMercado?.trim() || null,
         clientesAtendidos: input.clientesAtendidos?.trim() || null,
         logoUrl: input.logoUrl || null,
-        fotosEmpresa: (input.fotosEmpresa ?? []).filter(Boolean),
-        fotosDepoimento: (input.fotosDepoimento ?? []).filter(Boolean),
-        fotosAntesDepois: (input.fotosAntesDepois ?? []).filter(Boolean),
+        fotoProfissionalUrl: input.fotoProfissionalUrl || null,
+        fotosEmpresa: (input.fotosEmpresa ?? []).filter(Boolean).slice(0, 3),
+        fotosDepoimento: (input.fotosDepoimento ?? []).filter(Boolean).slice(0, 5),
+        fotosAntesDepois: (input.fotosAntesDepois ?? []).filter(Boolean).slice(0, 5),
         observacoes: input.observacoes?.trim() || null,
       },
     })

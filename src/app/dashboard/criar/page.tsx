@@ -28,6 +28,7 @@ function briefingParaForm(b: Briefing): Partial<FormData> {
     anosNoMercado: num(b.anosMercado) ?? 0,
     totalClientes: num(b.clientesAtendidos),
     logoUrl: b.logoUrl ?? undefined,
+    fotoProfissionalUrl: b.fotoProfissionalUrl ?? undefined,
     foto1Url: b.fotosEmpresa[0] ?? undefined,
     foto2Url: b.fotosEmpresa[1] ?? undefined,
     foto3Url: b.fotosEmpresa[2] ?? undefined,

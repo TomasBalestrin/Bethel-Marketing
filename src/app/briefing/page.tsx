@@ -54,12 +54,13 @@ function GrupoFotos({ label, ajuda, max, urls, onChange }: {
 const EMPTY: BriefingInput = {
   nomeEmpresa: '', email: '', whatsapp: '', endereco: '', instagram: '', horario: '',
   servicos: '', servicoCarroChefe: '', anosMercado: '', clientesAtendidos: '',
-  logoUrl: '', fotosEmpresa: [], fotosDepoimento: [], fotosAntesDepois: [], observacoes: '',
+  logoUrl: '', fotoProfissionalUrl: '', fotosEmpresa: [], fotosDepoimento: [], fotosAntesDepois: [], observacoes: '',
 }
 
 export default function BriefingPage() {
   const [f, setF] = useState<BriefingInput>(EMPTY)
   const [logoEnviando, setLogoEnviando] = useState(false)
+  const [profEnviando, setProfEnviando] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [erro, setErro] = useState('')
@@ -72,6 +73,14 @@ export default function BriefingPage() {
     const u = await uploadImagem(file)
     if (u) set('logoUrl', u)
     setLogoEnviando(false); e.target.value = ''
+  }
+
+  async function uploadFotoProfissional(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return
+    setProfEnviando(true)
+    const u = await uploadImagem(file)
+    if (u) set('fotoProfissionalUrl', u)
+    setProfEnviando(false); e.target.value = ''
   }
 
   async function enviar() {
@@ -155,6 +164,23 @@ export default function BriefingPage() {
             )}
           </div>
 
+          {/* Foto do profissional */}
+          <div>
+            <label className={labelCls}>Foto do profissional / proprietário</label>
+            <p className="text-xs text-gray-400 mb-1.5">Aparecerá na seção &quot;Sobre&quot; do site, ao lado das suas credenciais.</p>
+            {f.fotoProfissionalUrl ? (
+              <div className="flex items-center gap-3">
+                <img src={f.fotoProfissionalUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                <button type="button" onClick={() => set('fotoProfissionalUrl', '')} className="text-xs text-gray-500 hover:text-red-500">Remover</button>
+              </div>
+            ) : (
+              <label className="inline-flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-4 py-2.5 cursor-pointer text-sm text-gray-500 hover:border-indigo-400">
+                {profEnviando ? 'Enviando...' : '📁 Enviar foto'}
+                <input type="file" accept="image/*" className="hidden" onChange={uploadFotoProfissional} disabled={profEnviando} />
+              </label>
+            )}
+          </div>
+
           {/* Serviços */}
           <div>
             <label className={labelCls}>Serviços / produtos que faz</label>
@@ -177,7 +203,7 @@ export default function BriefingPage() {
 
           {/* Fotos */}
           <div className="border-t border-gray-100 pt-5 space-y-5">
-            <GrupoFotos label="Fotos da empresa (estrutura)" ajuda="Mostre o espaço, ambiente, equipe." max={5}
+            <GrupoFotos label="Fotos da empresa (estrutura)" ajuda="Mostre o espaço, ambiente, equipe." max={3}
               urls={f.fotosEmpresa ?? []} onChange={u => set('fotosEmpresa', u)} />
             <GrupoFotos label="Fotos de depoimentos" ajuda="Prints de conversas, avaliações (se tiver)." max={5}
               urls={f.fotosDepoimento ?? []} onChange={u => set('fotosDepoimento', u)} />

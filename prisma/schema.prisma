@@ -21,7 +21,6 @@ enum SiteStatus {
   ERROR
 }
 
-
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -212,18 +211,18 @@ model ContentProfile {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  instagram      String? // @ do perfil (identifica cada Instagram do mentorado)
-  negocio        String
-  nicho          String
-  publico        String  @db.Text // quem é o cliente ideal
-  idadePublico   String? // faixa etária
-  essencia       String? @db.Text // essência/diferencial do profissional
-  transformacao  String? @db.Text // antes → depois que o negócio entrega
-  tomVoz         String? // próximo, técnico, provocador...
-  crencas        String? @db.Text // opiniões/crenças fortes do mentorado
-  objecoes       String? @db.Text // objeções comuns dos clientes
-  provas         String? @db.Text // casos, números, depoimentos
-  servicos       String? @db.Text // serviços/produtos/procedimentos
+  instagram     String? // @ do perfil (identifica cada Instagram do mentorado)
+  negocio       String
+  nicho         String
+  publico       String  @db.Text // quem é o cliente ideal
+  idadePublico  String? // faixa etária
+  essencia      String? @db.Text // essência/diferencial do profissional
+  transformacao String? @db.Text // antes → depois que o negócio entrega
+  tomVoz        String? // próximo, técnico, provocador...
+  crencas       String? @db.Text // opiniões/crenças fortes do mentorado
+  objecoes      String? @db.Text // objeções comuns dos clientes
+  provas        String? @db.Text // casos, números, depoimentos
+  servicos      String? @db.Text // serviços/produtos/procedimentos
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -240,7 +239,7 @@ model ContentPiece {
   funil     String // topo | meio | fundo
   categoria String // conexao | educacional | viral | venda
   formato   String // reels | carrossel | imagem
-  tema      String @db.Text
+  tema      String  @db.Text
   servico   String?
 
   titulo   String
@@ -254,9 +253,9 @@ model ContentPiece {
 }
 
 model Site {
-  id          String     @id @default(uuid())
-  userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Identidade
   nomeNegocio String
@@ -283,12 +282,12 @@ model Site {
   ctaTexto    String?
 
   // Credibilidade
-  anosNoMercado       Int
-  totalClientes       Int?
-  totalClientesLabel  String?
-  certificados        String?
-  depoimentos    Depoimento[]
-  resultados     Resultado[]
+  anosNoMercado      Int
+  totalClientes      Int?
+  totalClientesLabel String?
+  certificados       String?
+  depoimentos        Depoimento[]
+  resultados         Resultado[]
 
   // Fotos
   foto1Url            String?
@@ -297,11 +296,11 @@ model Site {
   fotoProfissionalUrl String?
 
   // Contato
-  whatsapp              String
-  whatsappMensagem      String
-  instagram             String?
-  horarioAtendimento    String
-  registros             RegistroProfissional[]
+  whatsapp           String
+  whatsappMensagem   String
+  instagram          String?
+  horarioAtendimento String
+  registros          RegistroProfissional[]
 
   // Rastreamento
   metaPixelId    String?
@@ -325,24 +324,25 @@ model Site {
 
 // Briefing enviado pelo mentorado (formulário público) para eu criar o site
 model Briefing {
-  id                String   @id @default(uuid())
-  nomeEmpresa       String
-  email             String?
-  whatsapp          String
-  endereco          String?
-  instagram         String?
-  horario           String?
-  servicos          String?  @db.Text
-  servicoCarroChefe String?
-  anosMercado       String?
-  clientesAtendidos String?
-  logoUrl           String?
-  fotosEmpresa      String[]
-  fotosDepoimento   String[]
-  fotosAntesDepois  String[]
-  observacoes       String?  @db.Text
-  status            String   @default("novo") // novo | em_andamento | concluido
-  createdAt         DateTime @default(now())
+  id                  String   @id @default(uuid())
+  nomeEmpresa         String
+  email               String?
+  whatsapp            String
+  endereco            String?
+  instagram           String?
+  horario             String?
+  servicos            String?  @db.Text
+  servicoCarroChefe   String?
+  anosMercado         String?
+  clientesAtendidos   String?
+  logoUrl             String?
+  fotoProfissionalUrl String?
+  fotosEmpresa        String[]
+  fotosDepoimento     String[]
+  fotosAntesDepois    String[]
+  observacoes         String?  @db.Text
+  status              String   @default("novo") // novo | em_andamento | concluido
+  createdAt           DateTime @default(now())
 
   @@map("briefings")
 }
@@ -360,7 +360,7 @@ model Servico {
 }
 
 model Depoimento {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   siteId    String
   site      Site    @relation(fields: [siteId], references: [id], onDelete: Cascade)
   imagemUrl String  @default("")

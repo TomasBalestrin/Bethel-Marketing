@@ -64,7 +64,8 @@ export default async function AdminBriefingsPage() {
                 <div key={b.id} className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
-                      {b.logoUrl && <img src={b.logoUrl} alt="" className="w-12 h-12 object-contain rounded-lg border border-gray-200" />}
+                      {b.logoUrl && <img src={b.logoUrl} alt="Logo" title="Logo" className="w-12 h-12 object-contain rounded-lg border border-gray-200" />}
+                      {b.fotoProfissionalUrl && <img src={b.fotoProfissionalUrl} alt="Foto do profissional" title="Foto do profissional" className="w-12 h-12 object-cover rounded-lg border border-gray-200" />}
                       <div>
                         <p className="font-semibold text-gray-900">{b.nomeEmpresa}</p>
                         <p className="text-xs text-gray-400">{new Date(b.createdAt).toLocaleString('pt-BR')}</p>
