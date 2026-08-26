@@ -87,8 +87,8 @@ function hexEhClaro(hex: string): boolean {
   return 0.299 * r + 0.587 * g + 0.114 * b > 160
 }
 
-// Lê a cor de FUNDO real da logo amostrando os cantos da imagem (o fundo).
-// Retorna { hex, light } ou null se a logo for transparente/erro.
+// Lê a cor de FUNDO real da logo. Retorna { hex, light } ou null se a logo for
+// transparente/erro.
 async function logoBgColor(logoUrl: string): Promise<{ hex: string; light: boolean } | null> {
   try {
     const sharp = (await import('sharp')).default
@@ -97,24 +97,27 @@ async function logoBgColor(logoUrl: string): Promise<{ hex: string; light: boole
     const buf = Buffer.from(await res.arrayBuffer())
     const W = 64, H = 64
     const { data } = await sharp(buf).resize(W, H, { fit: 'fill' }).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-    // amostra cantos + meio das bordas superiores (onde costuma ser o fundo)
-    const pts: [number, number][] = [
-      [0, 0], [W - 1, 0], [0, H - 1], [W - 1, H - 1],
-      [Math.floor(W / 2), 0], [0, Math.floor(H / 2)], [W - 1, Math.floor(H / 2)],
-    ]
-    // Agrupa cores parecidas (bucket grosso só para CONTAR), mas acumula a cor
-    // REAL de cada grupo para usar a média exata depois — sem distorcer o tom.
+    // Varre a imagem INTEIRA (não só cantos/bordas) e agrupa cores parecidas
+    // (bucket grosso só para CONTAR), acumulando a cor REAL de cada grupo para
+    // usar a média exata depois — sem distorcer o tom. Isso evita o erro de
+    // amostrar só ~7 pontos: uma logo circular/badge exportada sem transparência
+    // (ex: JPEG) costuma ter os 4 cantos de uma cor "de moldura" (preto/branco)
+    // diferente da cor real do badge — pegar a cor dominante por ÁREA (não por
+    // ponto) acerta o fundo de verdade mesmo nesses casos.
     const groups: Record<string, { n: number; r: number; g: number; b: number }> = {}
     let transparent = 0
-    for (const [x, y] of pts) {
-      const i = (y * W + x) * 4
-      if (data[i + 3] < 128) { transparent++; continue }
-      const r = data[i], g = data[i + 1], b = data[i + 2]
-      const key = `${Math.round(r / 24)},${Math.round(g / 24)},${Math.round(b / 24)}`
-      const c = (groups[key] ??= { n: 0, r: 0, g: 0, b: 0 })
-      c.n++; c.r += r; c.g += g; c.b += b
+    const total = W * H
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4
+        if (data[i + 3] < 128) { transparent++; continue }
+        const r = data[i], g = data[i + 1], b = data[i + 2]
+        const key = `${Math.round(r / 24)},${Math.round(g / 24)},${Math.round(b / 24)}`
+        const c = (groups[key] ??= { n: 0, r: 0, g: 0, b: 0 })
+        c.n++; c.r += r; c.g += g; c.b += b
+      }
     }
-    if (transparent >= pts.length - 1) return null // logo transparente: não força barra
+    if (transparent / total >= 0.85) return null // logo majoritariamente transparente: não força barra
     const top = Object.values(groups).sort((a, b) => b.n - a.n)[0]
     if (!top) return null
     // cor final = média REAL da cor dominante (tom fiel ao fundo da logo)
