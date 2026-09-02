@@ -93,7 +93,8 @@ export default async function CriarPage({
           d.videoUrl ? { imagemUrl: '', videoUrl: d.videoUrl } : { imagemUrl: d.imagemUrl }
         ),
         resultados: site.resultados.map((r) => ({ imagemUrl: r.imagemUrl })),
-        fotosProfissionais: site.fotosProfissionais?.map((f) => ({ imagemUrl: f.imagemUrl })) ?? [],
+        fotosProfissionais: site.fotosProfissionais?.map((f) => ({ imagemUrl: f.imagemUrl })) ??
+          (site.fotoProfissionalUrl ? [{ imagemUrl: site.fotoProfissionalUrl }] : []),
         whatsapp: site.whatsapp,
         whatsappMensagem: site.whatsappMensagem,
         instagram: site.instagram ?? undefined,
