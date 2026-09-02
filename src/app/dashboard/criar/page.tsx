@@ -92,7 +92,9 @@ export default async function CriarPage({
         depoimentos: site.depoimentos.map((d) =>
           d.videoUrl ? { imagemUrl: '', videoUrl: d.videoUrl } : { imagemUrl: d.imagemUrl }
         ),
-        resultados: site.resultados.map((r) => ({ imagemUrl: r.imagemUrl })),
+        resultados: site.resultados.map((r) =>
+          r.videoUrl ? { imagemUrl: '', videoUrl: r.videoUrl } : { imagemUrl: r.imagemUrl }
+        ),
         whatsapp: site.whatsapp,
         whatsappMensagem: site.whatsappMensagem,
         instagram: site.instagram ?? undefined,

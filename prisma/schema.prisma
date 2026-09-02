@@ -293,7 +293,8 @@ model Site {
   foto1Url            String?
   foto2Url            String?
   foto3Url            String?
-  fotoProfissionalUrl String?
+  fotoProfissionalUrl String? // DEPRECATED: migrar para fotosProfissionais
+  fotosProfissionais  FotoProfissional[]
 
   // Contato
   whatsapp           String
@@ -386,4 +387,13 @@ model RegistroProfissional {
   numero String
 
   @@map("registros_profissionais")
+}
+
+model FotoProfissional {
+  id        String @id @default(uuid())
+  siteId    String
+  site      Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  imagemUrl String
+
+  @@map("fotos_profissionais")
 }

@@ -46,12 +46,17 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
   const parsed = formSchema.safeParse(data)
   if (!parsed.success) return { success: false, error: 'Dados do formulário inválidos' }
 
-  const { depoimentos: depoimentosRaw, resultados: resultadosRaw, servicos, registros, ...siteFields } = parsed.data
+  const { depoimentos: depoimentosRaw, resultados: resultadosRaw, fotosProfissionais: fotosProfissionaisRaw, servicos, registros, ...siteFields } = parsed.data
   // Descarta slots vazios (adicionados mas não preenchidos)
   const depoimentos = depoimentosRaw.filter(
     (d) => (d.imagemUrl?.trim() || '') !== '' || (d.videoUrl?.trim() || '') !== ''
   )
-  const resultados = resultadosRaw.filter((r) => (r.imagemUrl?.trim() || '') !== '')
+  const resultados = resultadosRaw.filter(
+    (r) => (r.imagemUrl?.trim() || '') !== '' || (r.videoUrl?.trim() || '') !== ''
+  )
+  const fotosProfissionais = fotosProfissionaisRaw?.filter(
+    (f) => (f.imagemUrl?.trim() || '') !== ''
+  ) || []
   const dbUser =
     (await prisma.user.findFirst({ where: { OR: [{ id: user.id }, { email: user.email! }] } })) ??
     (await prisma.user.create({ data: { id: user.id, email: user.email!, name: user.user_metadata?.name || user.email! } }))
@@ -66,6 +71,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
         await prisma.resultado.deleteMany({ where: { siteId: existing.id } })
         await prisma.servico.deleteMany({ where: { siteId: existing.id } })
         await prisma.registroProfissional.deleteMany({ where: { siteId: existing.id } })
+        await prisma.fotoProfissional.deleteMany({ where: { siteId: existing.id } })
         await prisma.site.update({
           where: { id: existing.id },
           data: {
@@ -77,6 +83,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
             resultados: { create: resultados },
             servicos: { create: servicos.map((s, i) => ({ ...s, ordem: i })) },
             registros: { create: registros },
+            fotosProfissionais: { create: fotosProfissionais },
           },
         })
         revalidatePath('/dashboard')
@@ -92,6 +99,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
         await prisma.resultado.deleteMany({ where: { siteId: existing.id } })
         await prisma.servico.deleteMany({ where: { siteId: existing.id } })
         await prisma.registroProfissional.deleteMany({ where: { siteId: existing.id } })
+        await prisma.fotoProfissional.deleteMany({ where: { siteId: existing.id } })
         await prisma.site.update({
           where: { id: existing.id },
           data: {
@@ -103,6 +111,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
             resultados: { create: resultados },
             servicos: { create: servicos.map((s, i) => ({ ...s, ordem: i })) },
             registros: { create: registros },
+            fotosProfissionais: { create: fotosProfissionais },
           },
         })
         revalidatePath('/dashboard')
@@ -119,6 +128,7 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
         resultados: { create: resultados },
         servicos: { create: servicos.map((s, i) => ({ ...s, ordem: i })) },
         registros: { create: registros },
+        fotosProfissionais: { create: fotosProfissionais },
       },
     })
 
@@ -136,7 +146,7 @@ export async function generateSite(siteId: string): Promise<Result> {
 
   const site = await prisma.site.findUnique({
     where: { id: siteId },
-    include: { depoimentos: true, resultados: true, servicos: { orderBy: { ordem: 'asc' } }, registros: true },
+    include: { depoimentos: true, resultados: true, servicos: { orderBy: { ordem: 'asc' } }, registros: true, fotosProfissionais: true },
   })
 
   if (!site) return { success: false, error: 'Site não encontrado' }

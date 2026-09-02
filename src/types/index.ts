@@ -34,6 +34,13 @@ export const step4Schema = z.object({
   foto2Url: z.string().optional(),
   foto3Url: z.string().optional(),
   fotoProfissionalUrl: z.string().optional(),
+  fotosProfissionais: z
+    .array(
+      z.object({
+        imagemUrl: z.string().optional().default(''),
+      })
+    )
+    .default([]),
   // Itens vazios (slot adicionado mas não preenchido) são tolerados aqui e
   // descartados no servidor (saveSite), para não travar o salvamento.
   depoimentos: z
@@ -48,6 +55,7 @@ export const step4Schema = z.object({
     .array(
       z.object({
         imagemUrl: z.string().optional().default(''),
+        videoUrl: z.string().optional(),
       })
     )
     .default([]),

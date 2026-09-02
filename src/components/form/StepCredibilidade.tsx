@@ -190,6 +190,69 @@ function DepoimentoItem({ index, onRemove }: { index: number; onRemove: () => vo
     : <DepoimentoImagem index={index} onRemove={onRemove} />
 }
 
+function ResultadoVideo({ index, onRemove }: { index: number; onRemove: () => void }) {
+  const { register, watch, setValue } = useFormContext<FormData>()
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro] = useState('')
+  const url = watch(`resultados.${index}.videoUrl`) ?? ''
+  const ehArquivo = Boolean(url) && !/instagram\.com/i.test(url)
+
+  async function enviarArquivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setEnviando(true); setErro('')
+    const res = await uploadVideo(file)
+    if (res.url) setValue(`resultados.${index}.videoUrl`, res.url)
+    else setErro(res.erro ?? 'Erro no envio')
+    setEnviando(false)
+  }
+
+  return (
+    <div className="relative rounded-lg border border-gray-200 bg-gray-50 p-2.5 flex flex-col justify-center gap-1.5 aspect-square">
+      <button type="button" onClick={onRemove}
+        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5">
+        <X className="w-3.5 h-3.5" />
+      </button>
+      <div className="flex items-center gap-1.5 text-gray-500">
+        <Video className="w-4 h-4" />
+        <span className="text-xs font-medium">Vídeo</span>
+      </div>
+
+      {ehArquivo ? (
+        <>
+          <video src={url} className="w-full rounded max-h-[70px] bg-black" preload="metadata" />
+          <p className="text-[10px] text-green-600 leading-tight">✅ Vídeo enviado (toca no site)</p>
+          <button type="button" onClick={() => setValue(`resultados.${index}.videoUrl`, '')}
+            className="text-[10px] text-gray-400 hover:underline">trocar</button>
+        </>
+      ) : (
+        <>
+          <Input
+            {...register(`resultados.${index}.videoUrl`)}
+            placeholder="Cole o link do Instagram"
+            className="text-xs h-8"
+          />
+          <label className="text-[10px] text-blue-600 hover:underline cursor-pointer">
+            {enviando ? 'Enviando vídeo...' : 'ou enviar arquivo (MP4, até 60MB)'}
+            <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden"
+              onChange={enviarArquivo} disabled={enviando} />
+          </label>
+          {erro && <p className="text-[10px] text-red-500 leading-tight">{erro}</p>}
+          <p className="text-[10px] text-gray-400 leading-tight">Arquivo toca no site. Link do Instagram pode abrir o app (Reels).</p>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ResultadoItem({ index, onRemove }: { index: number; onRemove: () => void }) {
+  const { watch } = useFormContext<FormData>()
+  const isVideo = watch(`resultados.${index}.videoUrl`) !== undefined
+  return isVideo
+    ? <ResultadoVideo index={index} onRemove={onRemove} />
+    : <ResultadoUpload index={index} onRemove={onRemove} />
+}
+
 function ResultadoUpload({ index, onRemove }: { index: number; onRemove: () => void }) {
   const { watch, setValue } = useFormContext<FormData>()
   const [uploading, setUploading] = useState(false)
@@ -230,15 +293,58 @@ function ResultadoUpload({ index, onRemove }: { index: number; onRemove: () => v
   )
 }
 
+function FotoProfissionalUpload({ index, onRemove }: { index: number; onRemove: () => void }) {
+  const { watch, setValue } = useFormContext<FormData>()
+  const [uploading, setUploading] = useState(false)
+  const url = watch(`fotosProfissionais.${index}.imagemUrl`)
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const uploaded = await uploadFoto(file)
+    if (uploaded) setValue(`fotosProfissionais.${index}.imagemUrl`, uploaded)
+    setUploading(false)
+  }
+
+  if (url) {
+    return (
+      <div className="relative group rounded-lg overflow-hidden border border-gray-200 aspect-square bg-gray-50">
+        <img src={url} alt={`Foto profissional ${index + 1}`} className="w-full h-full object-cover" />
+        <button type="button" onClick={onRemove}
+          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <label className="flex flex-col items-center justify-center gap-1.5 cursor-pointer border-2 border-dashed border-gray-200 rounded-lg aspect-square bg-gray-50 hover:bg-gray-100 transition-colors">
+      {uploading
+        ? <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+        : <User className="w-5 h-5 text-gray-300" />
+      }
+      <span className="text-xs text-gray-400 text-center px-1 leading-tight">
+        {uploading ? 'Enviando...' : 'Sua foto'}
+      </span>
+      <input type="file" accept="image/*" className="hidden" onChange={handleChange} disabled={uploading} />
+    </label>
+  )
+}
+
 export default function StepCredibilidade() {
   const { register, control, watch, setValue, formState: { errors } } = useFormContext<FormData>()
   const { fields, append, remove, move } = useFieldArray({ control, name: 'depoimentos' })
   const { fields: resFields, append: resAppend, remove: resRemove } = useFieldArray({ control, name: 'resultados' })
+  const { fields: fotosProfFields, append: fotoProfAppend, remove: fotoProfRemove } = useFieldArray({
+    control,
+    name: 'fotosProfissionais'
+  })
 
   const foto1Url = watch('foto1Url')
   const foto2Url = watch('foto2Url')
   const foto3Url = watch('foto3Url')
-  const fotoProfissionalUrl = watch('fotoProfissionalUrl')
 
   return (
     <div className="space-y-5">
@@ -301,22 +407,41 @@ export default function StepCredibilidade() {
 
       {/* Foto do profissional */}
       <div>
-        <div className="flex items-center gap-2 mb-2">
-          <User className="w-4 h-4 text-gray-400" />
-          <Label>Foto do profissional / proprietário</Label>
-        </div>
-        <div className="flex items-start gap-3">
-          <div className="w-24">
-            <FotoUpload
-              value={fotoProfissionalUrl}
-              onChange={(url) => setValue('fotoProfissionalUrl', url)}
-              label="Sua foto"
-              icon={User}
-            />
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4 text-gray-400" />
+            <Label>Foto do profissional / proprietário (até 5)</Label>
           </div>
-          <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-            Aparecerá na seção "Sobre" do site, ao lado das suas credenciais.
-          </p>
+          {fotosProfFields.length < 5 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => fotoProfAppend({ imagemUrl: '' })}
+              className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Adicionar
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mb-3">
+          Aparecerá na seção "Sobre" do site, ao lado das suas credenciais.
+        </p>
+
+        <div className="grid grid-cols-3 gap-2">
+          {fotosProfFields.map((field, index) => (
+            <FotoProfissionalUpload
+              key={field.id}
+              index={index}
+              onRemove={() => fotoProfRemove(index)}
+            />
+          ))}
+          {fotosProfFields.length === 0 && (
+            <div className="col-span-3 text-xs text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
+              Clique em &quot;Adicionar&quot; para incluir fotos do profissional
+            </div>
+          )}
         </div>
       </div>
 
@@ -393,23 +518,35 @@ export default function StepCredibilidade() {
         <div className="flex items-center justify-between mb-1">
           <Label>Resultados reais (até 5)</Label>
           {resFields.length < 5 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => resAppend({ imagemUrl: '' })}
-              className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Adicionar
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => resAppend({ imagemUrl: '' })}
+                className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                Foto
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => resAppend({ imagemUrl: '', videoUrl: '' })}
+                className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
+              >
+                <Video className="w-3.5 h-3.5" />
+                Vídeo
+              </Button>
+            </div>
           )}
         </div>
         <p className="text-xs text-gray-400 mb-3">Fotos de produtos, serviços ou antes e depois. Serão exibidas em uma galeria no site.</p>
 
         <div className="grid grid-cols-3 gap-2">
           {resFields.map((field, index) => (
-            <ResultadoUpload
+            <ResultadoItem
               key={field.id}
               index={index}
               onRemove={() => resRemove(index)}
