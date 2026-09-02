@@ -410,19 +410,20 @@ export default function StepCredibilidade() {
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-gray-400" />
-            <Label>Foto do profissional / proprietário (até 5) [{fotosProfFields.length}]</Label>
+            <Label>Foto do profissional / proprietário (até 5)</Label>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => fotoProfAppend({ imagemUrl: '' })}
-            className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
-            style={{ display: fotosProfFields.length >= 5 ? 'none' : 'flex' }}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Adicionar
-          </Button>
+          {fotosProfFields.length < 5 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => fotoProfAppend({ imagemUrl: '' })}
+              className="text-blue-600 hover:text-blue-700 h-auto py-0 px-0 text-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Adicionar
+            </Button>
+          )}
         </div>
         <p className="text-xs text-gray-400 mb-3">
           Aparecerá na seção "Sobre" do site, ao lado das suas credenciais.

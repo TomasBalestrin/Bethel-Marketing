@@ -29,6 +29,7 @@ function briefingParaForm(b: Briefing): Partial<FormData> {
     totalClientes: num(b.clientesAtendidos),
     logoUrl: b.logoUrl ?? undefined,
     fotoProfissionalUrl: b.fotoProfissionalUrl ?? undefined,
+    fotosProfissionais: b.fotoProfissionalUrl ? [{ imagemUrl: b.fotoProfissionalUrl }] : [],
     foto1Url: b.fotosEmpresa[0] ?? undefined,
     foto2Url: b.fotosEmpresa[1] ?? undefined,
     foto3Url: b.fotosEmpresa[2] ?? undefined,
@@ -93,8 +94,13 @@ export default async function CriarPage({
           d.videoUrl ? { imagemUrl: '', videoUrl: d.videoUrl } : { imagemUrl: d.imagemUrl }
         ),
         resultados: site.resultados.map((r) => ({ imagemUrl: r.imagemUrl })),
-        fotosProfissionais: site.fotosProfissionais?.map((f) => ({ imagemUrl: f.imagemUrl })) ??
-          (site.fotoProfissionalUrl ? [{ imagemUrl: site.fotoProfissionalUrl }] : []),
+        // Sites antigos guardavam uma única foto em fotoProfissionalUrl. Quando o
+        // array novo ainda está vazio, migramos essa foto para dentro dele.
+        fotosProfissionais: site.fotosProfissionais?.length
+          ? site.fotosProfissionais.map((f) => ({ imagemUrl: f.imagemUrl }))
+          : site.fotoProfissionalUrl
+            ? [{ imagemUrl: site.fotoProfissionalUrl }]
+            : [],
         whatsapp: site.whatsapp,
         whatsappMensagem: site.whatsappMensagem,
         instagram: site.instagram ?? undefined,

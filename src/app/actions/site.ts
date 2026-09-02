@@ -162,7 +162,7 @@ export async function generateSite(siteId: string): Promise<Result> {
   await prisma.site.update({ where: { id: siteId }, data: { status: 'GENERATING' } })
 
   try {
-    const html = await generateSiteHTML({ ...site, depoimentos: site.depoimentos, resultados: site.resultados, servicos: site.servicos, registros: site.registros, totalClientesLabel: site.totalClientesLabel ?? null, siteUrl: site.subdomain ?? null })
+    const html = await generateSiteHTML({ ...site, depoimentos: site.depoimentos, resultados: site.resultados, servicos: site.servicos, registros: site.registros, fotosProfissionais: site.fotosProfissionais, totalClientesLabel: site.totalClientesLabel ?? null, siteUrl: site.subdomain ?? null })
 
     await prisma.site.update({
       where: { id: siteId },

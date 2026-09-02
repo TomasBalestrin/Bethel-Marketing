@@ -24,6 +24,7 @@ type SiteData = {
   foto2Url?: string | null
   foto3Url?: string | null
   fotoProfissionalUrl?: string | null
+  fotosProfissionais?: { imagemUrl: string }[]
   depoimentos: { imagemUrl: string; videoUrl?: string | null }[]
   resultados: { imagemUrl: string; videoUrl?: string | null }[]
   registros: { tipo: string; numero: string }[]
@@ -146,6 +147,16 @@ export async function generateSiteHTML(data: SiteData): Promise<string> {
     const tipo = m[1].toLowerCase() === 'reels' ? 'reel' : m[1].toLowerCase()
     return `https://www.instagram.com/${tipo}/${m[2]}/embed`
   }
+  // Fotos do profissional: o array novo tem prioridade; se estiver vazio,
+  // usa a foto única antiga (sites criados antes do suporte a múltiplas fotos).
+  const fotosProfissionais = (
+    data.fotosProfissionais?.length
+      ? data.fotosProfissionais.map(f => f.imagemUrl)
+      : data.fotoProfissionalUrl
+        ? [data.fotoProfissionalUrl]
+        : []
+  ).filter((u): u is string => Boolean(u && u.trim()))
+
   const depoimentosItens = data.depoimentos
     .map(d => {
       const v = d.videoUrl?.trim()
@@ -219,7 +230,7 @@ CREDIBILIDADE:
 - Anos no mercado: ${data.anosNoMercado}
 ${data.totalClientes ? `- ${data.totalClientes}+ ${data.totalClientesLabel || 'clientes atendidos'}` : ''}
 ${data.certificados ? `- Certificações/Formações: ${data.certificados}` : ''}
-${data.fotoProfissionalUrl ? `- Foto do profissional: ${data.fotoProfissionalUrl}` : ''}
+${fotosProfissionais.length > 0 ? `- Fotos do profissional/proprietário (${fotosProfissionais.length}): use TODAS na seção "Sobre"${fotosProfissionais.length > 1 ? ' — monte uma galeria/grade harmônica com elas' : ''}\n${fotosProfissionais.map((url, i) => `  • Foto ${i + 1}: ${url}`).join('\n')}` : ''}
 
 FOTOS DO NEGÓCIO:
 ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0
@@ -286,7 +297,7 @@ ESTILO DO HEADER (obrigatório): o <header> deve ter EXATAMENTE background:${hea
   </div>
   NENHUM outro elemento dentro de .hero-content além de h1, p.hero-sub e a.btn-cta.
 3. <section id="servicos"> — título e subtítulo da seção CENTRALIZADOS (text-align:center), cards dos serviços com título e descrição. NÃO use ícones nem emojis nos cards. FOTO POR SERVIÇO: quando o serviço tiver uma URL de imagem fornecida ([IMAGEM DO SERVIÇO: ...]), exiba essa foto no TOPO do card como <img> com width:100%; height:180px; object-fit:contain; background:#f7f7f7; padding:8px; border-radius:8px; margin-bottom:12px — use object-fit:CONTAIN (NÃO cover) para mostrar o produto INTEIRO, sem cortar. Quando o serviço estiver marcado [SEM IMAGEM], renderize o card NORMALMENTE só com título e descrição, SEM espaço reservado, SEM placeholder e SEM quebrar o layout — cada card é independente (uns podem ter foto e outros não, e o grid deve ficar alinhado mesmo assim). TODO o conteúdo de texto do card CENTRALIZADO (title e descrição). OBRIGATÓRIO: quando um serviço tiver descrição fornecida, copie o texto EXATAMENTE como está — proibido parafrasear, resumir, reescrever ou alterar a descrição.
-4. <section id="sobre"> — título CENTRALIZADO criativo e específico ao segmento (PROIBIDO usar frases genéricas como "Atendimento humanizado", "com resultados reais" ou similares — crie um título relevante ao nicho), números destacados (${data.anosNoMercado} anos, ${data.totalClientes ? `${data.totalClientes}+ ${data.totalClientesLabel || 'clientes atendidos'}` : 'experiência'})${data.certificados ? ', certificações' : ''}${data.fotoProfissionalUrl ? `, foto do profissional em destaque com object-fit:cover; object-position:top center; border-radius:12px` : ''}. NÃO inclua registros profissionais (CRO, CRM, OAB, CREA, etc.) entre os números/cards de destaque desta seção — esses registros aparecem SOMENTE no rodapé. Use APENAS números REAIS fornecidos (anos no mercado, total de clientes, certificações) nos cards de destaque. NÃO invente estatísticas genéricas ou óbvias como "100% foco no paciente", "100% de satisfação", "5 estrelas", "atendimento humanizado" — só dados concretos e reais.
+4. <section id="sobre"> — título CENTRALIZADO criativo e específico ao segmento (PROIBIDO usar frases genéricas como "Atendimento humanizado", "com resultados reais" ou similares — crie um título relevante ao nicho), números destacados (${data.anosNoMercado} anos, ${data.totalClientes ? `${data.totalClientes}+ ${data.totalClientesLabel || 'clientes atendidos'}` : 'experiência'})${data.certificados ? ', certificações' : ''}${fotosProfissionais.length > 0 ? `, ${fotosProfissionais.length > 1 ? `as ${fotosProfissionais.length} fotos do profissional em uma galeria/grade` : 'foto do profissional em destaque'} com object-fit:cover; object-position:top center; border-radius:12px` : ''}. NÃO inclua registros profissionais (CRO, CRM, OAB, CREA, etc.) entre os números/cards de destaque desta seção — esses registros aparecem SOMENTE no rodapé. Use APENAS números REAIS fornecidos (anos no mercado, total de clientes, certificações) nos cards de destaque. NÃO invente estatísticas genéricas ou óbvias como "100% foco no paciente", "100% de satisfação", "5 estrelas", "atendimento humanizado" — só dados concretos e reais.
 5. ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0 ? `<section id="espaco"> — título e subtítulo CENTRALIZADOS, galeria com as fotos do negócio. LAYOUT OBRIGATÓRIO: no mobile (padrão, sem @media) as fotos devem ficar em coluna única, cada uma ocupando 100% da largura (display:flex; flex-direction:column; gap:16px). No desktop (@media min-width:768px) pode usar grid de 2 ou 3 colunas. Cada foto: width:100%; height:auto; object-fit:contain; border-radius:12px — mostre a imagem INTEIRA, sem cortar (NÃO use aspect-ratio fixo nem object-fit:cover na galeria). Use as URLs exatas fornecidas.` : '<!-- sem galeria de fotos -->'}
 6. ${depoimentosItens.length > 0 ? `<section id="depoimentos"> — título e subtítulo CENTRALIZADOS, carrossel com os ${depoimentosItens.length} depoimentos fornecidos (podem ser IMAGENS/prints e/ou VÍDEOS do Instagram, misturados na MESMA ordem em que aparecem na lista DEPOIMENTOS). Cada slide contém UM item:
   - Se o item for IMAGEM (print): <img> com estes estilos EXATOS: display:block; margin:0 auto; width:auto; max-width:100%; max-height:480px; height:auto; object-fit:contain; border-radius:12px. O teto de altura (max-height:480px) é OBRIGATÓRIO para os prints não ficarem gigantes.
