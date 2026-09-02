@@ -43,7 +43,14 @@ export function FormStepper({ initialData, siteId }: { initialData: Partial<Form
 
   const methods = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { depoimentos: [], ...initialData } as FormData,
+    defaultValues: {
+      depoimentos: [],
+      resultados: [],
+      fotosProfissionais: [],
+      servicos: [{ nome: '', descricao: undefined, imagemUrl: undefined }],
+      registros: [],
+      ...initialData
+    } as FormData,
     mode: 'onTouched',
   })
 
