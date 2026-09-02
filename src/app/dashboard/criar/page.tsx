@@ -52,7 +52,7 @@ export default async function CriarPage({
 
   const { siteId, briefingId } = await searchParams
 
-  const include = { depoimentos: true, resultados: true, servicos: { orderBy: { ordem: 'asc' as const } }, registros: true }
+  const include = { depoimentos: true, resultados: true, servicos: { orderBy: { ordem: 'asc' as const } }, registros: true, fotosProfissionais: true }
 
   // Admin editing a specific site, or regular user's own site
   const site = siteId
@@ -92,9 +92,8 @@ export default async function CriarPage({
         depoimentos: site.depoimentos.map((d) =>
           d.videoUrl ? { imagemUrl: '', videoUrl: d.videoUrl } : { imagemUrl: d.imagemUrl }
         ),
-        resultados: site.resultados.map((r) =>
-          r.videoUrl ? { imagemUrl: '', videoUrl: r.videoUrl } : { imagemUrl: r.imagemUrl }
-        ),
+        resultados: site.resultados.map((r) => ({ imagemUrl: r.imagemUrl })),
+        fotosProfissionais: site.fotosProfissionais?.map((f) => ({ imagemUrl: f.imagemUrl })) ?? [],
         whatsapp: site.whatsapp,
         whatsappMensagem: site.whatsappMensagem,
         instagram: site.instagram ?? undefined,
