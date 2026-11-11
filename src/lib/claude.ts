@@ -325,10 +325,48 @@ REGRA GLOBAL DE BOTÕES: NUNCA coloque emojis dentro de botões CTA (hero, seç�
 
 REQUISITOS TÉCNICOS:
 - Mobile-first responsivo (breakpoint principal: 768px)
-- Google Font 'Inter' via @import no CSS
+- Google Font 'Inter' via @import no CSS (pesos 400;500;600;700;800)
 - Botão WhatsApp flutuante fixo (canto inferior direito): position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.2). Use o SVG oficial do WhatsApp inline: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>. NUNCA use emoji 💬 no botão flutuante.
-- Efeito hover nos cards de serviços
-- Gradiente suave no hero usando as cores da paleta
+DESIGN MODERNO (OBRIGATÓRIO — é isto que separa um site atual de um site datado):
+
+ESCALA E RESPIRO (o erro nº1 de site datado é tudo apertado e do mesmo tamanho):
+- Padding vertical das seções: 96px no desktop, 64px no mobile. Nunca menos que isso.
+- Headline do hero: font-size clamp(2.2rem, 6vw, 4rem); line-height 1.08; letter-spacing -0.03em; font-weight 800.
+- Títulos de seção (h2): clamp(1.9rem, 4vw, 2.75rem); line-height 1.15; letter-spacing -0.02em; font-weight 700.
+- Corpo de texto: 1.0625rem; line-height 1.7; cor com opacidade (nunca preto puro).
+- Larguras de leitura: parágrafos de seção com max-width 60ch; margin-inline auto.
+- Hierarquia por TAMANHO e PESO, nunca só por cor.
+
+SUPERFÍCIES E PROFUNDIDADE (nada de bordas cinza 1px por todo lado):
+- Cards: background #fff; border-radius 16px; border 1px solid rgba(0,0,0,0.06); box-shadow 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px -12px rgba(0,0,0,0.12). Sombra suave e difusa, NUNCA sombra dura/preta.
+- Raio: 16px em cards, 12px em imagens, 999px em botões e badges (pill).
+- Alterne o fundo das seções entre #fff e var(--light) para criar ritmo visual. Nunca todas as seções com o mesmo fundo.
+
+COR (use a paleta com parcimônia — site datado satura cor em tudo):
+- Fundo dominante é branco/neutro. A cor primária aparece em pontos de destaque: botões, badges, números, detalhes.
+- NUNCA pinte seções inteiras com a cor primária chapada (exceto a faixa de CTA final).
+- Textos: títulos em var(--dark); corpo em um cinza-neutro derivado (ex: #52525b), nunca #000.
+- Gradientes apenas sutis (ex: linear-gradient(180deg, var(--light), #fff)). Proibido gradiente vibrante de duas cores fortes, é a marca registrada de site datado.
+
+BOTÕES:
+- CTA principal: padding 16px 32px; border-radius 999px; font-weight 600; font-size 1.0625rem; background var(--primary); color #fff; box-shadow 0 4px 14px -4px color-mix(in srgb, var(--primary) 50%, transparent).
+- Hover: transform translateY(-2px) e sombra mais forte; transition all .2s ease.
+
+MICROINTERAÇÕES (discretas, nunca exageradas):
+- Cards no hover: transform translateY(-4px) + sombra mais pronunciada; transition .25s ease.
+- Links do nav com underline animado ou mudança de opacidade.
+- Adicione transition em tudo que muda no hover. Nunca mudanças bruscas.
+
+SEÇÃO SOBRE — números destacados:
+- Números grandes (clamp(2rem, 5vw, 3rem), font-weight 800, cor var(--primary)) com rótulo pequeno embaixo em caixa alta, letter-spacing 0.08em, font-size 0.75rem, cor cinza.
+
+ACABAMENTO:
+- Grid de serviços: gap 24px; repeat(auto-fit, minmax(280px, 1fr)) para adaptar à quantidade de cards sem sobrar card órfão.
+- Imagens sempre com border-radius e object-fit adequado.
+- Badges de seção: pill com background color-mix(in srgb, var(--primary) 12%, transparent); color var(--primary); padding 6px 16px; font-size 0.8125rem; font-weight 600; letter-spacing 0.02em.
+
+PROIBIÇÕES ESTÉTICAS (marcas de site datado):
+- Proibido: sombras duras (ex: 0 4px 8px rgba(0,0,0,0.3)), bordas grossas, cantos retos em cards, gradientes berrantes, texto centralizado em bloco longo sem max-width, seções espremidas, fontes serifadas decorativas, emojis como ícones.
 - SEO COMPLETO no <head> — implemente TODOS os itens abaixo:
   a) <title>${data.servicoDestaque} em ${data.cidade} | ${data.nomeNegocio}</title>
   b) <meta name="description" content="[150 chars: serviço + cidade + resultado principal + CTA ex: Agende sua avaliação]">
@@ -376,11 +414,11 @@ REQUISITOS TÉCNICOS:
 
 Todos os links de WhatsApp devem usar exatamente: ${whatsappLink}
 
-IMPORTANTE: Certifique-se de gerar TODAS as seções acima e fechar corretamente com </body></html>. Priorize completude sobre detalhamento de CSS.`
+IMPORTANTE: Certifique-se de gerar TODAS as seções acima e fechar corretamente com </body></html>. O CSS do DESIGN MODERNO acima é obrigatório, não é opcional: um site completo porém visualmente datado é considerado FALHA.`
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 16000,
+    max_tokens: 24000,
     system: [
       {
         type: 'text',
