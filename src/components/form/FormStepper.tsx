@@ -70,8 +70,15 @@ export function FormStepper({ initialData, siteId }: { initialData: Partial<Form
       toast.success('Dados salvos! Agora gere o site.')
       router.push(`/dashboard/preview?siteId=${result.data.id}`)
     } catch (e) {
+      // A Server Action lançou (ex: payload acima do limite, timeout, rede).
+      // Mostra o motivo real em vez de culpar sempre a conexão.
       console.error('handleSubmit error:', e)
-      toast.error('Não foi possível salvar. Verifique a conexão e tente de novo.')
+      const msg = e instanceof Error && e.message ? e.message : ''
+      toast.error(
+        msg
+          ? `Não foi possível salvar: ${msg}`
+          : 'Não foi possível salvar. Verifique a conexão e tente de novo.'
+      )
     } finally {
       setSaving(false)
     }

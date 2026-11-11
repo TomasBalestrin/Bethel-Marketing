@@ -44,7 +44,14 @@ export async function saveSite(data: unknown, siteId?: string): Promise<Result<{
   if (!user) return { success: false, error: 'Não autorizado' }
 
   const parsed = formSchema.safeParse(data)
-  if (!parsed.success) return { success: false, error: 'Dados do formulário inválidos' }
+  if (!parsed.success) {
+    // Sem isto, o motivo real some e fica impossível saber qual campo reprovou.
+    const campos = parsed.error.issues
+      .map((i) => `${i.path.join('.') || 'formulário'}: ${i.message}`)
+      .slice(0, 3)
+    console.error('saveSite validação falhou:', parsed.error.issues)
+    return { success: false, error: `Dados inválidos. ${campos.join(' | ')}` }
+  }
 
   const { depoimentos: depoimentosRaw, resultados: resultadosRaw, fotosProfissionais: fotosProfissionaisRaw, servicos, registros, ...siteFields } = parsed.data
   // Descarta slots vazios (adicionados mas não preenchidos)
