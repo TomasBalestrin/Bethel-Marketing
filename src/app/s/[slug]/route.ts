@@ -243,6 +243,15 @@ export async function GET(
     html = html.replace('</head>', `${fix}</head>`)
   }
 
+  // Logos em JPEG trazem o fundo branco embutido e viram um retângulo sobre a
+  // foto do hero. No padrão novo (header transparente) trocamos a URL da logo
+  // pela rota que devolve a mesma imagem em PNG com o fundo recortado.
+  if (site.logoUrl && /\.(jpe?g)(\?|$)/i.test(site.logoUrl)) {
+    const semFundo = `/api/logo-transparente?url=${encodeURIComponent(site.logoUrl)}`
+    const ehPadraoNovo = /\.scrolled\b/i.test(html) || /hero-overlay/i.test(html)
+    if (ehPadraoNovo) html = html.split(site.logoUrl).join(semFundo)
+  }
+
   // Converte a galeria de "Resultados reais" em carrossel (igual ao de depoimentos)
   if (html.includes('</body>')) {
     html = html.replace('</body>', `${RESULTADOS_CAROUSEL_JS}</body>`)
