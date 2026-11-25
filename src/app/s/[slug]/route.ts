@@ -238,6 +238,11 @@ export async function GET(
     // header antes de rolar: a logo precisa ficar sobre a foto, sem barra.
     const headerLimpo = headerTransparente
       ? 'header:not(.scrolled){background:linear-gradient(to bottom,rgba(0,0,0,0.65),transparent) !important;box-shadow:none !important;border-bottom:0 !important}'
+        // Sites gerados antes do ajuste trazem o texto do hero centralizado
+        // (margin:0 auto) e os chips de serviços. Corrige ambos ao servir,
+        // sem precisar regerar.
+        + '#hero .hero-content{margin-left:0 !important;margin-right:auto !important;padding-left:6vw !important;max-width:680px !important}'
+        + '#hero .hero-tags{display:none !important}'
       : ''
     const fix = `<style id="bethel-fix">${headerRule}${headerLimpo}${alturaHeader}header img{height:${logoHeight}px !important;width:auto !important}footer img{height:${logoHeight}px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#espaco img{aspect-ratio:auto !important;height:auto !important;object-fit:contain !important}#servicos img,.service-card img{object-fit:contain !important;height:180px !important;width:100% !important;background:#f7f7f7 !important;padding:8px !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}${RESULTADOS_CAROUSEL_CSS}</style>`
     html = html.replace('</head>', `${fix}</head>`)
@@ -247,7 +252,16 @@ export async function GET(
   // foto do hero. No padrão novo (header transparente) trocamos a URL da logo
   // pela rota que devolve a mesma imagem em PNG com o fundo recortado.
   if (site.logoUrl && /\.(jpe?g)(\?|$)/i.test(site.logoUrl)) {
-    const semFundo = `/api/logo-transparente?url=${encodeURIComponent(site.logoUrl)}`
+    // URL ABSOLUTA do domínio principal: o middleware reescreve qualquer
+    // caminho do subdomínio do cliente para /s/<slug>, então um caminho
+    // relativo cairia na própria página do site em vez da rota da imagem.
+    // MENTOR_DOMAIN primeiro: NEXT_PUBLIC_APP_URL aponta para bethelapps.com,
+    // que não serve esta rota (devolve HTML). O domínio que responde com a
+    // imagem é www.<MENTOR_DOMAIN>.
+    const base = process.env.MENTOR_DOMAIN
+      ? `https://www.${process.env.MENTOR_DOMAIN}`
+      : (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? '')
+    const semFundo = `${base}/api/logo-transparente?url=${encodeURIComponent(site.logoUrl)}`
     const ehPadraoNovo = /\.scrolled\b/i.test(html) || /hero-overlay/i.test(html)
     if (ehPadraoNovo) html = html.split(site.logoUrl).join(semFundo)
   }
