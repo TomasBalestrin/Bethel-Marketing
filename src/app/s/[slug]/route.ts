@@ -188,8 +188,12 @@ export async function GET(
     // logo precisa aparecer sobre a imagem. Pintar o header com fundo sólido
     // (como os sites antigos exigem) mataria esse efeito, então ali o fundo
     // só vale depois que a página rola (header.scrolled).
-    const headerTransparente = /header[^{]*\{[^}]*position:\s*fixed/i.test(html)
-      && /\.scrolled/i.test(html)
+    // Detecta o padrão novo pelo que ele SEMPRE tem: a classe .scrolled (usada
+    // para dar fundo ao header só depois de rolar) ou o overlay do hero.
+    // Antes isto exigia "position: fixed" junto, e quando a IA gerava o header
+    // com "position: sticky" a detecção falhava e a barra voltava a ser pintada
+    // sólida por baixo, tapando a logo sobre a foto.
+    const headerTransparente = /\.scrolled\b/i.test(html) || /hero-overlay/i.test(html)
     const alvoHeader = headerTransparente
       ? 'header.scrolled,header.scrolled .header-inner'
       : 'header,header .header-inner'
@@ -230,7 +234,12 @@ export async function GET(
     const alturaHeader = headerTransparente
       ? ''
       : `header{height:auto !important}header .header-inner{min-height:${minHeaderHeight}px !important;align-items:center !important}`
-    const fix = `<style id="bethel-fix">${headerRule}${alturaHeader}header img{height:${logoHeight}px !important;width:auto !important}footer img{height:${logoHeight}px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#espaco img{aspect-ratio:auto !important;height:auto !important;object-fit:contain !important}#servicos img,.service-card img{object-fit:contain !important;height:180px !important;width:100% !important;background:#f7f7f7 !important;padding:8px !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}${RESULTADOS_CAROUSEL_CSS}</style>`
+    // No padrão novo, neutraliza qualquer fundo/sombra que a IA tenha posto no
+    // header antes de rolar: a logo precisa ficar sobre a foto, sem barra.
+    const headerLimpo = headerTransparente
+      ? 'header:not(.scrolled){background:linear-gradient(to bottom,rgba(0,0,0,0.65),transparent) !important;box-shadow:none !important;border-bottom:0 !important}'
+      : ''
+    const fix = `<style id="bethel-fix">${headerRule}${headerLimpo}${alturaHeader}header img{height:${logoHeight}px !important;width:auto !important}footer img{height:${logoHeight}px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#espaco img{aspect-ratio:auto !important;height:auto !important;object-fit:contain !important}#servicos img,.service-card img{object-fit:contain !important;height:180px !important;width:100% !important;background:#f7f7f7 !important;padding:8px !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}${RESULTADOS_CAROUSEL_CSS}</style>`
     html = html.replace('</head>', `${fix}</head>`)
   }
 
