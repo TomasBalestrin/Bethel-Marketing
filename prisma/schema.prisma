@@ -274,6 +274,7 @@ model Site {
 
   // Público
   dorPrincipal String
+  duvidasFrequentes String? // uma pergunta por linha; alimenta o FAQ do site
 
   // Hero
   heroFotoUrl String?

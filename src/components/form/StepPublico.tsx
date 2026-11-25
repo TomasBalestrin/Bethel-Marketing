@@ -21,6 +21,20 @@ export default function StepPublico() {
         />
         {errors.dorPrincipal && <p className="text-xs text-red-500 mt-1">{errors.dorPrincipal.message}</p>}
       </div>
+
+      <div>
+        <Label htmlFor="duvidasFrequentes">Dúvidas frequentes dos clientes</Label>
+        <Textarea
+          id="duvidasFrequentes"
+          {...register('duvidasFrequentes')}
+          className="mt-1.5"
+          rows={4}
+          placeholder={'Uma por linha. Ex:\nPrecisa de encaminhamento médico?\nQuantas sessões são necessárias?\nAtende por convênio?\nTem estacionamento no local?'}
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          Viram a seção de perguntas frequentes do site. Se deixar em branco, a IA cria as perguntas a partir dos serviços e do horário.
+        </p>
+      </div>
     </div>
   )
 }

@@ -23,6 +23,10 @@ export const step2Schema = z.object({
 
 export const step3Schema = z.object({
   dorPrincipal: z.string().min(10, 'Descreva a principal dor'),
+  // Alimenta a seção de FAQ do site. Opcional: sem isto a IA deduz as
+  // perguntas a partir dos serviços e do horário, mas o resultado fica
+  // mais genérico.
+  duvidasFrequentes: z.string().optional(),
 })
 
 export const step4Schema = z.object({

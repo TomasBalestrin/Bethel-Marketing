@@ -16,6 +16,7 @@ type SiteData = {
   servicoDestaque: string
   resultadoCliente: string
   dorPrincipal: string
+  duvidasFrequentes?: string | null
   anosNoMercado: number
   totalClientes?: number | null
   totalClientesLabel?: string | null
@@ -225,6 +226,7 @@ ${services}
 
 PÚBLICO E POSICIONAMENTO:
 - Dor principal resolvida: ${data.dorPrincipal}
+${data.duvidasFrequentes?.trim() ? `- Dúvidas frequentes informadas pelo cliente (use EXATAMENTE estas como base do FAQ, uma por linha):\n${data.duvidasFrequentes.trim()}` : ''}
 
 CREDIBILIDADE:
 - Anos no mercado: ${data.anosNoMercado}
@@ -309,6 +311,10 @@ ${resultadosItens.length > 0 ? `6b. <section id="resultados"> (coloque ANTES da 
   - VÍDEO EM ARQUIVO: <video src="URL" controls playsinline preload="metadata" style="display:block; width:100%; height:auto; max-height:520px; border-radius:12px; background:#000"></video>. NUNCA use <iframe> nem <img> nesse caso.
   - VÍDEO DO INSTAGRAM: <iframe src="URL" scrolling="no" allowtransparency="true" allowfullscreen style="display:block; width:100%; max-width:400px; height:580px; border:0; border-radius:12px; background:#fff; margin:0 auto"></iframe>.
   Use as URLs EXATAS fornecidas.` : '<!-- sem resultados -->'}
+6c. <section id="faq"> — SEÇÃO OBRIGATÓRIA. Eyebrow + título (ex: "Perguntas frequentes"). Crie de 5 a 6 perguntas REAIS que um cliente deste segmento faria antes de entrar em contato, com respostas de 2 a 4 linhas cada. Baseie-se APENAS nas informações fornecidas (serviços, horário, endereço, formas de atendimento, diferenciais). NUNCA invente preço, prazo, garantia, convênio ou promessa de resultado que não foi informado. Quando faltar dado para uma resposta, prefira uma pergunta diferente que os dados cobrem.
+  Implemente como acordeão acessível em HTML puro: cada item é <details class="faq-item"><summary>Pergunta</summary><p>Resposta</p></details>. Estilize: borda inferior 1px rgba(0,0,0,0.08); padding 24px 0; summary com cursor:pointer, font-size 18px, font-weight 500, list-style:none e ::-webkit-details-marker{display:none}; indicador + / − à direita via CSS. Texto das respostas alinhado à ESQUERDA (exceção à regra global de centralização, pois é texto longo), com max-width 70ch.
+  Esta seção também ajuda em SEO: reflita as mesmas perguntas no JSON-LD como FAQPage quando fizer sentido.
+
 7. <section id="cta"> — estrutura obrigatória em duas partes dentro de um container (max-width:600px; margin:0 auto; text-align:center):
    PARTE 1 (centralizada): badge, título h2, subtítulo p, e botão CTA — todos com text-align:center e o botão com display:inline-block ou display:block; margin:0 auto
    PARTE 2 (lista de contato): div separado com text-align:left, contendo os itens de ${temEndereco ? 'endereço, ' : ''}horário e Instagram, cada item com display:flex; align-items:center; gap:12px; margin-bottom:12px.${temEndereco ? '' : ' IMPORTANTE: NÃO inclua item de endereço/localização (o negócio não tem endereço físico).'} ${instagramHandles.length > 1 ? `Há ${instagramHandles.length} perfis de Instagram — mostre UM link clicável para CADA um (ex: @${instagramHandles[0]} e @${instagramHandles[1]}), cada link apontando para https://instagram.com/<perfil>.` : 'O Instagram deve ser um link clicável para https://instagram.com/<perfil>.'}
@@ -319,6 +325,7 @@ REGRA GLOBAL DE LAYOUT: Todo o conteúdo do site deve estar centralizado. Adicio
 section { text-align: center }
 section h1, section h2, section h3, section p, section span, section .badge, section .tag, section .label { text-align: center }
 Cada seção deve ter um container interno com max-width:1100px; margin:0 auto; padding:0 24px. Qualquer badge, tag ou label de seção (ex: "O QUE OFERECEMOS") deve ter display:inline-block; margin:0 auto 16px; — nunca alinhado à esquerda.
+EXCEÇÃO: o acordeão do FAQ (#faq summary, #faq p) usa text-align:left, pois são perguntas e respostas em texto corrido — centralizar texto longo prejudica a leitura. Declare essa exceção DEPOIS da regra global para ela prevalecer.
 REGRA GLOBAL DE TEXTO (obrigatória): NUNCA use travessão longo "—" (em dash) nem "–" (en dash) em NENHUM texto do site (headline, subtítulo, descrições, seção sobre, rodapé, legendas). Travessão soa artificial/gerado por IA. No lugar, reescreva a frase de forma natural usando vírgula, ponto, dois-pontos ou a conjunção "e". Ex: em vez de "atendimento humano — e técnico", escreva "atendimento humano e técnico"; em vez de "cada caso — porque cada pessoa é única", escreva "cada caso, porque cada pessoa é única" ou divida em duas frases. Hífen "-" só é permitido dentro de palavras compostas (ex: bem-estar) ou intervalos de horário (ex: 08h-18h).
 
 REGRA GLOBAL DE BOTÕES: NUNCA coloque emojis dentro de botões CTA (hero, seções, footer). Os botões devem conter apenas texto limpo: "${data.ctaTexto || 'Entrar em contato agora'}" — sem 💬, sem ✅, sem nenhum emoji. O texto do botão também NUNCA termina com ponto de exclamação (escreva "Entrar em contato agora", nunca "Entrar em contato agora!"). Todos os botões CTA devem estar CENTRALIZADOS em todas as telas: use display:block; margin:0 auto; text-align:center ou coloque em container com display:flex; justify-content:center.
@@ -327,46 +334,43 @@ REQUISITOS TÉCNICOS:
 - Mobile-first responsivo (breakpoint principal: 768px)
 - Google Font 'Inter' via @import no CSS (pesos 400;500;600;700;800)
 - Botão WhatsApp flutuante fixo (canto inferior direito): position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.2). Use o SVG oficial do WhatsApp inline: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>. NUNCA use emoji 💬 no botão flutuante.
-DESIGN MODERNO (OBRIGATÓRIO — é isto que separa um site atual de um site datado):
+DESIGN PREMIUM (OBRIGATÓRIO — é isto que separa um site caro de um site de template):
 
-ESCALA E RESPIRO (o erro nº1 de site datado é tudo apertado e do mesmo tamanho):
-- Padding vertical das seções: 96px no desktop, 64px no mobile. Nunca menos que isso.
-- Headline do hero: font-size clamp(2.2rem, 6vw, 4rem); line-height 1.08; letter-spacing -0.03em; font-weight 800.
-- Títulos de seção (h2): clamp(1.9rem, 4vw, 2.75rem); line-height 1.15; letter-spacing -0.02em; font-weight 700.
-- Corpo de texto: 1.0625rem; line-height 1.7; cor com opacidade (nunca preto puro).
-- Larguras de leitura: parágrafos de seção com max-width 60ch; margin-inline auto.
-- Hierarquia por TAMANHO e PESO, nunca só por cor.
+RESPIRO (o erro nº1 de site barato é tudo espremido):
+- Padding vertical das seções: 130px no desktop, 72px no mobile. Generoso, nunca apertado.
+- Container interno: max-width 1100px; margin 0 auto; padding 0 24px.
+- Espaço entre título de seção e conteúdo: 48px no desktop.
 
-SUPERFÍCIES E PROFUNDIDADE (nada de bordas cinza 1px por todo lado):
-- Cards: background #fff; border-radius 16px; border 1px solid rgba(0,0,0,0.06); box-shadow 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px -12px rgba(0,0,0,0.12). Sombra suave e difusa, NUNCA sombra dura/preta.
-- Raio: 16px em cards, 12px em imagens, 999px em botões e badges (pill).
-- Alterne o fundo das seções entre #fff e var(--light) para criar ritmo visual. Nunca todas as seções com o mesmo fundo.
+TIPOGRAFIA (leve e grande, nunca pesada e média):
+- Fonte Inter, pesos 300;400;500;600 apenas. NUNCA use font-weight 700/800 em títulos: peso alto é marca de site genérico. Títulos em 400 ou 500.
+- Headline do hero: font-size clamp(38px, 7vw, 76px); line-height 1.05; font-weight 400; letter-spacing -0.02em.
+- Títulos de seção (h2): clamp(30px, 4.5vw, 52px); line-height 1.12; font-weight 400.
+- Corpo: 16.5px; line-height 1.75; max-width 62ch.
+- EYEBROW (obrigatório acima de cada h2): texto curto em UPPERCASE; font-size 12px; font-weight 500; letter-spacing 0.18em; cor var(--primary); margin-bottom 18px. É o detalhe que mais eleva a percepção de acabamento.
+- Números de destaque (seção sobre): clamp(56px, 9vw, 110px); font-weight 300; line-height 1; cor var(--primary). Números GIGANTES, peso leve.
 
-COR (use a paleta com parcimônia — site datado satura cor em tudo):
-- Fundo dominante é branco/neutro. A cor primária aparece em pontos de destaque: botões, badges, números, detalhes.
-- NUNCA pinte seções inteiras com a cor primária chapada (exceto a faixa de CTA final).
-- Textos: títulos em var(--dark); corpo em um cinza-neutro derivado (ex: #52525b), nunca #000.
-- Gradientes apenas sutis (ex: linear-gradient(180deg, var(--light), #fff)). Proibido gradiente vibrante de duas cores fortes, é a marca registrada de site datado.
+PALETA DE DOIS TONS + ACENTO (não use muitas cores):
+- Defina :root com: --escuro (tom escuro profundo derivado de ${'${paleta.dark}'}), --claro (fundo creme/off-white, NUNCA branco puro #fff — use algo como #faf8f5 derivado da paleta), --acento (${'${paleta.primary}'}), --tinta (texto escuro).
+- Hero: fundo ESCURO (var(--escuro)) ocupando min-height 100vh, texto claro. É o que dá impacto imediato.
+- Demais seções alternam entre var(--claro) e branco levemente quente. NUNCA todas iguais.
+- O acento aparece só em: eyebrow, números, botões e detalhes finos. Nunca em blocos grandes.
 
-BOTÕES:
-- CTA principal: padding 16px 32px; border-radius 999px; font-weight 600; font-size 1.0625rem; background var(--primary); color #fff; box-shadow 0 4px 14px -4px color-mix(in srgb, var(--primary) 50%, transparent).
-- Hover: transform translateY(-2px) e sombra mais forte; transition all .2s ease.
+BOTÕES (discretos e elegantes):
+- padding 18px 28px; border-radius 2px (quase reto — pill arredondado demais parece datado); text-transform uppercase; font-size 13px; font-weight 500; letter-spacing 0.1em; background var(--acento); color var(--escuro); border 1px solid var(--acento); transition .25s.
+- Hover: inverte (background transparente, color var(--acento)).
 
-MICROINTERAÇÕES (discretas, nunca exageradas):
-- Cards no hover: transform translateY(-4px) + sombra mais pronunciada; transition .25s ease.
-- Links do nav com underline animado ou mudança de opacidade.
-- Adicione transition em tudo que muda no hover. Nunca mudanças bruscas.
+SUPERFÍCIES:
+- Cards: background transparente ou levemente contrastante; border 1px solid rgba(0,0,0,0.08); border-radius 4px; padding 40px 32px.
+- Sombras MUITO difusas e amplas quando usar: 0 40px 80px rgba(0,0,0,0.06) ou 0 10px 32px rgba(0,0,0,0.05). Proibido sombra curta e escura.
+- Linhas divisórias finas (1px) com baixa opacidade para separar blocos, em vez de caixas fechadas.
 
-SEÇÃO SOBRE — números destacados:
-- Números grandes (clamp(2rem, 5vw, 3rem), font-weight 800, cor var(--primary)) com rótulo pequeno embaixo em caixa alta, letter-spacing 0.08em, font-size 0.75rem, cor cinza.
+MOVIMENTO (discreto):
+- Elementos surgem ao rolar: opacity 0 -> 1 e translateY(24px) -> 0, transition .6s ease, disparado por IntersectionObserver em JS inline no final do body. Aplique nos títulos e cards de cada seção, com pequeno atraso incremental (stagger de 80ms).
+- Hover de cards: translateY(-4px) e borda levemente mais escura; transition .25s.
+- Respeite @media (prefers-reduced-motion: reduce): desative as animações.
 
-ACABAMENTO:
-- Grid de serviços: gap 24px; repeat(auto-fit, minmax(280px, 1fr)) para adaptar à quantidade de cards sem sobrar card órfão.
-- Imagens sempre com border-radius e object-fit adequado.
-- Badges de seção: pill com background color-mix(in srgb, var(--primary) 12%, transparent); color var(--primary); padding 6px 16px; font-size 0.8125rem; font-weight 600; letter-spacing 0.02em.
-
-PROIBIÇÕES ESTÉTICAS (marcas de site datado):
-- Proibido: sombras duras (ex: 0 4px 8px rgba(0,0,0,0.3)), bordas grossas, cantos retos em cards, gradientes berrantes, texto centralizado em bloco longo sem max-width, seções espremidas, fontes serifadas decorativas, emojis como ícones.
+PROIBIÇÕES ESTÉTICAS:
+- Proibido: font-weight 700/800 em títulos, branco puro como fundo de seção, sombras duras (0 4px 8px rgba(0,0,0,0.3)), gradientes berrantes de duas cores fortes, cards com borda grossa, emojis como ícones, seções espremidas (menos de 100px de padding no desktop).
 - SEO COMPLETO no <head> — implemente TODOS os itens abaixo:
   a) <title>${data.servicoDestaque} em ${data.cidade} | ${data.nomeNegocio}</title>
   b) <meta name="description" content="[150 chars: serviço + cidade + resultado principal + CTA ex: Agende sua avaliação]">

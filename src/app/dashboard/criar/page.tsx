@@ -78,6 +78,7 @@ export default async function CriarPage({
         servicoDestaque: site.servicoDestaque,
         resultadoCliente: site.resultadoCliente,
         dorPrincipal: site.dorPrincipal,
+        duvidasFrequentes: site.duvidasFrequentes ?? undefined,
         heroFotoUrl: site.heroFotoUrl ?? undefined,
         headline: site.headline ?? undefined,
         subheadline: site.subheadline ?? undefined,
