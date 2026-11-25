@@ -184,6 +184,15 @@ export async function GET(
   // 2) serviços (título + descrição) centralizados;
   // 3) botão CTA centralizado.
   if (html.includes('</head>')) {
+    // Sites no padrão novo têm header transparente sobre a foto do hero: a
+    // logo precisa aparecer sobre a imagem. Pintar o header com fundo sólido
+    // (como os sites antigos exigem) mataria esse efeito, então ali o fundo
+    // só vale depois que a página rola (header.scrolled).
+    const headerTransparente = /header[^{]*\{[^}]*position:\s*fixed/i.test(html)
+      && /\.scrolled/i.test(html)
+    const alvoHeader = headerTransparente
+      ? 'header.scrolled,header.scrolled .header-inner'
+      : 'header,header .header-inner'
     let headerRule = ''
     const barraForcada = HEADER_BG_OVERRIDE[slug]
     if (barraForcada) {
@@ -192,9 +201,9 @@ export async function GET(
       const claro = hexEhClaro(barraForcada)
       const txt = claro ? '#1a1a1a' : '#ffffff'
       headerRule =
-        `header,header .header-inner{background:${barraForcada} !important;background-image:none !important}` +
-        `header a,header nav a,header .menu-btn,header button{color:${txt} !important}` +
-        (claro ? 'header{border-bottom:1px solid rgba(0,0,0,0.08) !important}' : '')
+        `${alvoHeader}{background:${barraForcada} !important;background-image:none !important}` +
+        (headerTransparente ? '' : `header a,header nav a,header .menu-btn,header button{color:${txt} !important}`) +
+        (claro && !headerTransparente ? 'header{border-bottom:1px solid rgba(0,0,0,0.08) !important}' : '')
     } else if (site.logoUrl) {
       const bg = await logoBgColor(site.logoUrl)
       if (bg) {
@@ -205,9 +214,9 @@ export async function GET(
         const footerBorder = bg.light ? 'footer{border-top:1px solid rgba(0,0,0,0.08) !important}' : ''
         headerRule =
           // Header: fundo = cor da logo + texto com contraste
-          `header,header .header-inner{background:${barColor} !important;background-image:none !important}` +
-          `header a,header nav a,header .menu-btn,header button{color:${txt} !important}` +
-          headerBorder +
+          `${alvoHeader}{background:${barColor} !important;background-image:none !important}` +
+          (headerTransparente ? '' : `header a,header nav a,header .menu-btn,header button{color:${txt} !important}`) +
+          (headerTransparente ? '' : headerBorder) +
           // Footer: mesma cor da logo + texto com contraste (logo se integra ao rodapé)
           `footer,footer .footer-inner{background:${barColor} !important;background-image:none !important}` +
           `footer,footer a,footer p,footer span,footer h1,footer h2,footer h3,footer h4{color:${txt} !important}` +
@@ -216,7 +225,12 @@ export async function GET(
     }
     const logoHeight = LOGO_HEIGHT_OVERRIDE[slug] ?? 72
     const minHeaderHeight = Math.max(92, logoHeight + 20)
-    const fix = `<style id="bethel-fix">${headerRule}header{height:auto !important}header .header-inner{min-height:${minHeaderHeight}px !important;align-items:center !important}header img{height:${logoHeight}px !important;width:auto !important}footer img{height:${logoHeight}px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#espaco img{aspect-ratio:auto !important;height:auto !important;object-fit:contain !important}#servicos img,.service-card img{object-fit:contain !important;height:180px !important;width:100% !important;background:#f7f7f7 !important;padding:8px !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}${RESULTADOS_CAROUSEL_CSS}</style>`
+    // No padrão novo o header é fino e transparente: forçar min-height criaria
+    // uma faixa alta sobre a foto.
+    const alturaHeader = headerTransparente
+      ? ''
+      : `header{height:auto !important}header .header-inner{min-height:${minHeaderHeight}px !important;align-items:center !important}`
+    const fix = `<style id="bethel-fix">${headerRule}${alturaHeader}header img{height:${logoHeight}px !important;width:auto !important}footer img{height:${logoHeight}px !important;width:auto !important}.service-icon,.service-card .icon,.service-card .card-icon,.servico-icon{display:none !important}a[href*="wa.me"] svg,a[href*="wa.me"] svg *{pointer-events:none !important}#espaco img{aspect-ratio:auto !important;height:auto !important;object-fit:contain !important}#servicos img,.service-card img{object-fit:contain !important;height:180px !important;width:100% !important;background:#f7f7f7 !important;padding:8px !important}#servicos,#servicos *{text-align:center !important}.btn-cta{display:block !important;width:fit-content !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important}${RESULTADOS_CAROUSEL_CSS}</style>`
     html = html.replace('</head>', `${fix}</head>`)
   }
 

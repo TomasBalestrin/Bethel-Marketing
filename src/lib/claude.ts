@@ -279,7 +279,7 @@ ESTRUTURA OBRIGATÓRIA (nesta ordem):
   </div>
 </header>
 O header deve conter EXATAMENTE os elementos acima — nenhum elemento a mais.
-ESTILO DO HEADER (obrigatório): o <header> deve ter EXATAMENTE background:${headerBg} — a MESMA cor da logo e a MESMA cor escura usada no rodapé. NÃO use var(--primary), NÃO use a cor primária, NÃO use gradiente e NÃO use branco no header. Use exatamente ${headerBg}. Assim a logo se integra à barra e não parece um quadrado colado. Os links do <nav> e o ícone do botão de menu devem ser claros/legíveis sobre esse fundo escuro (branco #ffffff). Header fixo no topo (sticky).
+ESTILO DO HEADER (obrigatório): o <header> é TRANSPARENTE sobre a foto do hero, para a logo aparecer integrada à imagem. Use: position:fixed; top:0; left:0; right:0; z-index:50; background:linear-gradient(to bottom, rgba(0,0,0,0.65), transparent); padding:22px 0. PROIBIDO fundo sólido colorido no header: taparia a foto e faria a logo parecer um quadrado colado. Os links do <nav>, o nome e o ícone do menu devem ser claros (#ffffff ou var(--claro)) para contrastar com a foto escurecida pelo overlay. Ao rolar, adicione a classe .scrolled via JS inline (window.scrollY > 60) que aplica background:${headerBg} e padding:14px 0, com transition de .3s.
 2. <section id="hero"> — ${data.heroFotoUrl
   ? `LAYOUT COM FOTO — implemente com CSS responsivo:
   MOBILE (padrão, sem @media): section#hero { position:relative; min-height:100svh; overflow:hidden; padding:0; display:flex; align-items:flex-end }
@@ -325,7 +325,7 @@ REGRA GLOBAL DE LAYOUT: Todo o conteúdo do site deve estar centralizado. Adicio
 section { text-align: center }
 section h1, section h2, section h3, section p, section span, section .badge, section .tag, section .label { text-align: center }
 Cada seção deve ter um container interno com max-width:1100px; margin:0 auto; padding:0 24px. Qualquer badge, tag ou label de seção (ex: "O QUE OFERECEMOS") deve ter display:inline-block; margin:0 auto 16px; — nunca alinhado à esquerda.
-EXCEÇÃO: o acordeão do FAQ (#faq summary, #faq p) usa text-align:left, pois são perguntas e respostas em texto corrido — centralizar texto longo prejudica a leitura. Declare essa exceção DEPOIS da regra global para ela prevalecer.
+EXCEÇÕES à centralização (declare-as DEPOIS da regra global para prevalecerem): (a) o conteúdo do #hero fica alinhado à ESQUERDA sobre a foto, não centralizado; (b) o acordeão do FAQ (#faq summary, #faq p) usa text-align:left, pois são perguntas e respostas em texto corrido — centralizar texto longo prejudica a leitura. Declare essa exceção DEPOIS da regra global para ela prevalecer.
 REGRA GLOBAL DE TEXTO (obrigatória): NUNCA use travessão longo "—" (em dash) nem "–" (en dash) em NENHUM texto do site (headline, subtítulo, descrições, seção sobre, rodapé, legendas). Travessão soa artificial/gerado por IA. No lugar, reescreva a frase de forma natural usando vírgula, ponto, dois-pontos ou a conjunção "e". Ex: em vez de "atendimento humano — e técnico", escreva "atendimento humano e técnico"; em vez de "cada caso — porque cada pessoa é única", escreva "cada caso, porque cada pessoa é única" ou divida em duas frases. Hífen "-" só é permitido dentro de palavras compostas (ex: bem-estar) ou intervalos de horário (ex: 08h-18h).
 
 REGRA GLOBAL DE BOTÕES: NUNCA coloque emojis dentro de botões CTA (hero, seções, footer). Os botões devem conter apenas texto limpo: "${data.ctaTexto || 'Entrar em contato agora'}" — sem 💬, sem ✅, sem nenhum emoji. O texto do botão também NUNCA termina com ponto de exclamação (escreva "Entrar em contato agora", nunca "Entrar em contato agora!"). Todos os botões CTA devem estar CENTRALIZADOS em todas as telas: use display:block; margin:0 auto; text-align:center ou coloque em container com display:flex; justify-content:center.
@@ -334,43 +334,55 @@ REQUISITOS TÉCNICOS:
 - Mobile-first responsivo (breakpoint principal: 768px)
 - Google Font 'Inter' via @import no CSS (pesos 400;500;600;700;800)
 - Botão WhatsApp flutuante fixo (canto inferior direito): position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.2). Use o SVG oficial do WhatsApp inline: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>. NUNCA use emoji 💬 no botão flutuante.
-DESIGN PREMIUM (OBRIGATÓRIO — é isto que separa um site caro de um site de template):
+DESIGN PREMIUM (OBRIGATÓRIO — siga à risca, é o padrão aprovado):
 
-RESPIRO (o erro nº1 de site barato é tudo espremido):
-- Padding vertical das seções: 130px no desktop, 72px no mobile. Generoso, nunca apertado.
-- Container interno: max-width 1100px; margin 0 auto; padding 0 24px.
-- Espaço entre título de seção e conteúdo: 48px no desktop.
+FONTES (duas famílias, papéis distintos — este é o item mais importante):
+- @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&display=swap');
+- TÍTULOS (h1, h2, h3, números de destaque, perguntas do FAQ): font-family 'Playfair Display', serif; font-weight 400. NUNCA Inter em título. NUNCA peso 600+.
+- CORPO, eyebrows, botões, menu, rótulos: font-family Inter, sans-serif.
+- DESTAQUE EM ITÁLICO DOURADO (assinatura visual deste padrão): dentro do h1 do hero e de títulos de seção, envolva 1 ou 2 palavras-chave em <em> com: font-family 'Playfair Display', serif; font-style italic; font-weight 400; color var(--acento). Ex: "Rejuvenesça <em>10 anos</em> em apenas <em>2 horas</em>". Use em números, no resultado prometido ou no diferencial. Nunca em mais de 2 trechos por título.
 
-TIPOGRAFIA (leve e grande, nunca pesada e média):
-- Fonte Inter, pesos 300;400;500;600 apenas. NUNCA use font-weight 700/800 em títulos: peso alto é marca de site genérico. Títulos em 400 ou 500.
-- Headline do hero: font-size clamp(38px, 7vw, 76px); line-height 1.05; font-weight 400; letter-spacing -0.02em.
-- Títulos de seção (h2): clamp(30px, 4.5vw, 52px); line-height 1.12; font-weight 400.
-- Corpo: 16.5px; line-height 1.75; max-width 62ch.
-- EYEBROW (obrigatório acima de cada h2): texto curto em UPPERCASE; font-size 12px; font-weight 500; letter-spacing 0.18em; cor var(--primary); margin-bottom 18px. É o detalhe que mais eleva a percepção de acabamento.
-- Números de destaque (seção sobre): clamp(56px, 9vw, 110px); font-weight 300; line-height 1; cor var(--primary). Números GIGANTES, peso leve.
+PALETA (dois tons profundos + dourado):
+:root deve definir: --escuro (tom escuro profundo derivado de ${'${paleta.dark}'}), --escuro-soft (variação levemente mais clara), --claro (creme quente, NUNCA #fff puro), --acento (${'${paleta.primary}'}), --tinta (texto escuro), --hair (rgba(255,255,255,0.14) para linhas sobre fundo escuro).
+- Seções escuras e claras alternam. Hero sempre escuro.
 
-PALETA DE DOIS TONS + ACENTO (não use muitas cores):
-- Defina :root com: --escuro (tom escuro profundo derivado de ${'${paleta.dark}'}), --claro (fundo creme/off-white, NUNCA branco puro #fff — use algo como #faf8f5 derivado da paleta), --acento (${'${paleta.primary}'}), --tinta (texto escuro).
-- Hero: fundo ESCURO (var(--escuro)) ocupando min-height 100vh, texto claro. É o que dá impacto imediato.
-- Demais seções alternam entre var(--claro) e branco levemente quente. NUNCA todas iguais.
-- O acento aparece só em: eyebrow, números, botões e detalhes finos. Nunca em blocos grandes.
+HERO (tela cheia com foto de fundo):
+${data.heroFotoUrl ? `- A foto ${'${data.heroFotoUrl}'} é FUNDO da seção inteira, não um elemento ao lado: position absolute; inset 0; width 100%; height 100%; object-fit cover; object-position top center.
+- Sobre ela, um overlay em gradiente para o texto ficar legível: position absolute; inset 0; background linear-gradient(to bottom, rgba(0,0,0,.25) 0%, rgba(0,0,0,.55) 45%, var(--escuro) 100%).
+- O conteúdo (eyebrow, h1, subtítulo, chips, botão) fica em z-index 2, alinhado à ESQUERDA, na metade inferior da seção, com padding 0 24px 64px. No desktop, limite o texto a max-width 680px.
+- A seção tem min-height 100svh; display flex; align-items flex-end.` : `- Sem foto: a seção é fundo var(--escuro) sólido, min-height 88svh, conteúdo centralizado.`}
+- Headline: 'Playfair Display'; font-size clamp(40px, 8vw, 86px); line-height 1.08; font-weight 400; color var(--claro).
+- Subtítulo: Inter; 17px; line-height 1.7; color rgba(255,255,255,.72); max-width 60ch.
+- CHIPS de palavras-chave abaixo do subtítulo (use os nomes dos serviços, no máximo 5): border 1px solid var(--hair); border-radius 999px; padding 9px 18px; font-size 12px; text-transform uppercase; color var(--claro); opacity .85; gap 8px; flex-wrap wrap.
 
-BOTÕES (discretos e elegantes):
-- padding 18px 28px; border-radius 2px (quase reto — pill arredondado demais parece datado); text-transform uppercase; font-size 13px; font-weight 500; letter-spacing 0.1em; background var(--acento); color var(--escuro); border 1px solid var(--acento); transition .25s.
-- Hover: inverte (background transparente, color var(--acento)).
+HEADER (transparente sobre a foto):
+- position fixed; top 0; left 0; right 0; z-index 50; background linear-gradient(to bottom, rgba(0,0,0,.65), transparent); padding 22px 0. SEM cor sólida: a logo precisa aparecer sobre a imagem.
+- Botão do header: "vazado" (background transparent; border 1px solid var(--acento); color var(--acento); border-radius 2px; padding 12px 26px; font-size 12px; text-transform uppercase; letter-spacing .1em).
+- Ao rolar (classe .scrolled via JS inline), o header ganha background var(--escuro) e padding menor.
 
-SUPERFÍCIES:
-- Cards: background transparente ou levemente contrastante; border 1px solid rgba(0,0,0,0.08); border-radius 4px; padding 40px 32px.
-- Sombras MUITO difusas e amplas quando usar: 0 40px 80px rgba(0,0,0,0.06) ou 0 10px 32px rgba(0,0,0,0.05). Proibido sombra curta e escura.
-- Linhas divisórias finas (1px) com baixa opacidade para separar blocos, em vez de caixas fechadas.
+EYEBROW (acima de cada h2 e no hero):
+- Inter; 12px; font-weight 500; text-transform uppercase; letter-spacing .18em; color var(--acento); display inline-flex; align-items center; gap 14px.
+- Com traço antes: ::before { content:""; width:40px; height:1px; background:var(--acento) }.
 
-MOVIMENTO (discreto):
-- Elementos surgem ao rolar: opacity 0 -> 1 e translateY(24px) -> 0, transition .6s ease, disparado por IntersectionObserver em JS inline no final do body. Aplique nos títulos e cards de cada seção, com pequeno atraso incremental (stagger de 80ms).
-- Hover de cards: translateY(-4px) e borda levemente mais escura; transition .25s.
-- Respeite @media (prefers-reduced-motion: reduce): desative as animações.
+RESPIRO E SUPERFÍCIES:
+- Padding de seção: 130px 0 no desktop, 72px 0 no mobile. Container: width min(1180px, 92vw); margin 0 auto.
+- Divisões por LINHAS FINAS (1px, baixa opacidade), não por caixas fechadas. Cards, quando usados: border 1px solid var(--hair); border-radius 2px; padding 44px 36px; sem sombra pesada.
+- Sombras, quando houver: 0 40px 80px rgba(0,0,0,.08). Proibido sombra curta e escura.
 
-PROIBIÇÕES ESTÉTICAS:
-- Proibido: font-weight 700/800 em títulos, branco puro como fundo de seção, sombras duras (0 4px 8px rgba(0,0,0,0.3)), gradientes berrantes de duas cores fortes, cards com borda grossa, emojis como ícones, seções espremidas (menos de 100px de padding no desktop).
+BOTÕES:
+- background var(--acento); color var(--escuro); border 1px solid var(--acento); border-radius 2px; padding 18px 30px; text-transform uppercase; font-size 13px; font-weight 500; letter-spacing .1em; transition .25s.
+- Hover: background transparent; color var(--acento).
+
+NÚMEROS DE DESTAQUE (seção sobre):
+- 'Playfair Display'; clamp(44px, 7vw, 88px); font-weight 400; color var(--acento); line-height 1.
+- Rótulo abaixo em Inter; 11px; uppercase; letter-spacing .18em; opacity .7.
+
+MOVIMENTO:
+- Reveal ao rolar: opacity 0 -> 1 e translateY(24px) -> 0; transition .7s ease; via IntersectionObserver inline no fim do body, com stagger de 80ms.
+- Respeite @media (prefers-reduced-motion: reduce) desativando as animações.
+
+PROIBIÇÕES:
+- Proibido: Inter em títulos, font-weight 600+ em títulos, header com fundo sólido colorido cobrindo a logo, botão pill (999px) nos CTAs, branco puro como fundo, sombras duras, gradiente berrante de duas cores, emojis como ícones, seções com menos de 100px de padding no desktop.
 - SEO COMPLETO no <head> — implemente TODOS os itens abaixo:
   a) <title>${data.servicoDestaque} em ${data.cidade} | ${data.nomeNegocio}</title>
   b) <meta name="description" content="[150 chars: serviço + cidade + resultado principal + CTA ex: Agende sua avaliação]">
@@ -446,10 +458,13 @@ IMPORTANTE: Certifique-se de gerar TODAS as seções acima e fechar corretamente
     .replace(/\s*```$/, '')
     .trim()
 
-  // Garante que a barra do header tenha exatamente a cor da logo (a IA às vezes
-  // usa a cor primária/gradiente). Injeta um override com !important.
+  // O header fica TRANSPARENTE sobre a foto do hero (a logo precisa aparecer
+  // integrada à imagem). O override antigo forçava fundo sólido com
+  // !important e matava esse efeito; agora ele só garante a cor da logo
+  // DEPOIS que a página rola (header.scrolled), quando a barra passa a ter
+  // fundo próprio.
   if (data.logoUrl) {
-    const override = `<style id="bethel-header-bg">header,header>div,.header-inner,.site-header,.navbar,.topbar{background:${headerBg} !important;background-image:none !important}</style>`
+    const override = `<style id="bethel-header-bg">header.scrolled,header.scrolled>div,header.scrolled .header-inner{background:${headerBg} !important;background-image:none !important}</style>`
     html = html.includes('</head>') ? html.replace('</head>', `${override}</head>`) : `${override}${html}`
   }
 
