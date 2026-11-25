@@ -82,8 +82,7 @@ export function PreviewContent({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const limitReached = geracoesCount >= 3
-  const canRegenerate = !limitReached && !isGenerating && !isPendingPublish
+  const canRegenerate = !isGenerating && !isPendingPublish
 
   return (
     <div className="flex flex-col h-screen bg-gray-900">
@@ -95,7 +94,7 @@ export function PreviewContent({
           </Link>
           <div className="min-w-0">
             <p className="text-white font-medium text-sm truncate">{nomeNegocio}</p>
-            <p className="text-gray-400 text-xs">{geracoesCount}/3 gerações usadas</p>
+            <p className="text-gray-400 text-xs">{geracoesCount} {geracoesCount === 1 ? 'geração' : 'gerações'}</p>
           </div>
         </div>
 
@@ -141,15 +140,6 @@ export function PreviewContent({
             </>
           )}
 
-          {limitReached && serverStatus !== 'PUBLISHED' && (
-            <Button asChild variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700 bg-transparent">
-              <Link href="/dashboard/criar">
-                <Pencil />
-                Editar formulário
-              </Link>
-            </Button>
-          )}
-
           {canRegenerate && htmlGerado && (
             <Button
               variant="outline"
@@ -188,7 +178,7 @@ export function PreviewContent({
             <AlertTriangle className="w-10 h-10 text-red-400 mb-4" />
             <p className="text-white font-medium">Erro ao gerar o site</p>
             <p className="text-gray-400 text-sm mt-1 mb-4">
-              {limitReached ? 'Limite de gerações atingido.' : 'Tente novamente.'}
+              Tente novamente.
             </p>
             {canRegenerate && (
               <Button onClick={handleGenerate} variant="outline" className="border-gray-600 text-gray-300 bg-transparent">
@@ -196,14 +186,12 @@ export function PreviewContent({
                 Tentar novamente
               </Button>
             )}
-            {limitReached && (
-              <Button asChild variant="outline" className="border-gray-600 text-gray-300 bg-transparent">
-                <Link href="/dashboard/criar">
-                  <Pencil />
-                  Editar formulário
-                </Link>
-              </Button>
-            )}
+            <Button asChild variant="outline" className="border-gray-600 text-gray-300 bg-transparent">
+              <Link href="/dashboard/criar">
+                <Pencil />
+                Editar formulário
+              </Link>
+            </Button>
           </div>
         ) : htmlGerado ? (
           <div className={`h-full flex flex-col items-center transition-all duration-300 ${viewport === 'mobile' ? 'bg-gray-800 py-4' : ''}`}>

@@ -162,10 +162,6 @@ export async function generateSite(siteId: string): Promise<Result> {
   const isAdmin = dbUser?.role === 'ADMIN'
   if (!isAdmin && site.userId !== user.id) return { success: false, error: 'Acesso negado' }
 
-  if (site.geracoesCount >= 3) {
-    return { success: false, error: 'Limite de 3 gerações atingido. Edite o formulário para continuar.' }
-  }
-
   await prisma.site.update({ where: { id: siteId }, data: { status: 'GENERATING' } })
 
   try {

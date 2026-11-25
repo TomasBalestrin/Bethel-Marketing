@@ -96,7 +96,7 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-2 text-xs text-gray-400 mb-5">
                     <span>Criado em {new Date(site.createdAt).toLocaleDateString('pt-BR')}</span>
                     <span>·</span>
-                    <span>{site.geracoesCount}/3 gerações</span>
+                    <span>{site.geracoesCount} {site.geracoesCount === 1 ? 'geração' : 'gerações'}</span>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
@@ -212,7 +212,7 @@ export default async function DashboardPage() {
                 <span>·</span>
                 <span>Atualizado em {new Date(site.updatedAt).toLocaleDateString('pt-BR')}</span>
                 <span>·</span>
-                <span>{site.geracoesCount}/3 gerações</span>
+                <span>{site.geracoesCount} {site.geracoesCount === 1 ? 'geração' : 'gerações'}</span>
               </div>
 
               <div className="flex flex-wrap gap-2">
