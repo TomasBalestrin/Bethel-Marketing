@@ -281,23 +281,23 @@ ESTRUTURA OBRIGATÓRIA (nesta ordem):
 O header deve conter EXATAMENTE os elementos acima — nenhum elemento a mais.
 ESTILO DO HEADER (obrigatório): o <header> é TRANSPARENTE sobre a foto do hero, para a logo aparecer integrada à imagem. Use: position:fixed; top:0; left:0; right:0; z-index:50; background:linear-gradient(to bottom, rgba(0,0,0,0.65), transparent); padding:22px 0. PROIBIDO fundo sólido colorido no header: taparia a foto e faria a logo parecer um quadrado colado. Os links do <nav>, o nome e o ícone do menu devem ser claros (#ffffff ou var(--claro)) para contrastar com a foto escurecida pelo overlay. Ao rolar, adicione a classe .scrolled via JS inline (window.scrollY > 60) que aplica background:${headerBg} e padding:14px 0, com transition de .3s.
 2. <section id="hero"> — ${data.heroFotoUrl
-  ? `LAYOUT COM FOTO — implemente com CSS responsivo:
-  MOBILE (padrão, sem @media): section#hero { position:relative; min-height:100svh; overflow:hidden; padding:0; display:flex; align-items:flex-end }
-  A foto ocupa TODO o bloco no mobile: .hero-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:top center }
-  O texto fica sobre a foto na metade inferior: .hero-content { position:relative; z-index:2; width:100%; padding:40px 24px 48px; background:linear-gradient(transparent,rgba(0,0,0,0.75) 35%); color:#fff; text-align:center }
-  DESKTOP (@media(min-width:768px)): section#hero { display:flex; align-items:center; gap:48px; padding:80px 48px; min-height:auto; background:var(--color-light) }
-  A foto fica vertical ao lado do texto: .hero-img { position:static; width:340px; height:520px; flex-shrink:0; object-fit:cover; object-position:top center; border-radius:16px }
-  O texto fica ao lado: .hero-content { position:static; background:none; color:var(--color-dark); flex:1; padding:0 }
-  Headline e subheadline no .hero-content com cor adequada para cada breakpoint. URL da foto: ${data.heroFotoUrl}`
-  : 'A headline deve ser o PRIMEIRO elemento visível da seção, sem nada acima dela. Todo o conteúdo do hero deve estar centralizado (text-align:center).'}
+  ? `LAYOUT COM FOTO DE FUNDO (igual em mobile e desktop, muda só a escala):
+  section#hero { position:relative; min-height:100svh; overflow:hidden; padding:0; display:flex; align-items:flex-end }
+  A foto é o FUNDO da seção inteira (nunca um elemento ao lado do texto): .hero-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:top center; border-radius:0 }
+  Overlay em gradiente por cima da foto, para o texto ficar legível e a seção emendar na cor escura: .hero-overlay { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 45%, var(--escuro) 100%) }
+  O texto fica sobre a foto, na metade inferior, ALINHADO À ESQUERDA: .hero-content { position:relative; z-index:2; width:min(1180px,92vw); margin:0 auto; padding:0 0 64px; text-align:left; max-width:680px; color:var(--claro) }
+  URL da foto: ${data.heroFotoUrl}`
+  : 'Sem foto: a seção é fundo var(--escuro) sólido, min-height:88svh, conteúdo centralizado. A headline deve ser o PRIMEIRO elemento visível da seção.'}
 
-  O .hero-content deve conter EXATAMENTE esta estrutura HTML, sem adicionar nenhum outro elemento:
+  O .hero-content deve conter EXATAMENTE esta estrutura HTML, nesta ordem:
   <div class="hero-content">
-    <h1>${data.headline || '[headline impactante baseada na dor+resultado do cliente]'}</h1>
+    <span class="eyebrow">[nome do profissional/negócio em MAIÚSCULAS]</span>
+    <h1>${data.headline || '[headline impactante baseada na dor+resultado do cliente, com 1 ou 2 palavras-chave envolvidas em <em> para o itálico de destaque]'}</h1>
     <p class="hero-sub">${data.subheadline || '[subheadline complementar em 1-2 frases]'}</p>
+    <div class="hero-tags">[1 chip por serviço, no máximo 5: <span class="tag">NOME DO SERVIÇO</span>]</div>
     <a href="${`https://wa.me/55${data.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(data.whatsappMensagem)}`}" class="btn-cta">${data.ctaTexto || 'Entrar em contato agora'}</a>
   </div>
-  NENHUM outro elemento dentro de .hero-content além de h1, p.hero-sub e a.btn-cta.
+  NENHUM outro elemento além desses cinco. Continua PROIBIDO no hero: badges de estatística, anos de experiência, número de clientes, cidade/estado ou qualquer dado que pertence à seção "sobre". Os chips contêm SOMENTE nomes de serviços.
 3. <section id="servicos"> — título e subtítulo da seção CENTRALIZADOS (text-align:center), cards dos serviços com título e descrição. NÃO use ícones nem emojis nos cards. FOTO POR SERVIÇO: quando o serviço tiver uma URL de imagem fornecida ([IMAGEM DO SERVIÇO: ...]), exiba essa foto no TOPO do card como <img> com width:100%; height:180px; object-fit:contain; background:#f7f7f7; padding:8px; border-radius:8px; margin-bottom:12px — use object-fit:CONTAIN (NÃO cover) para mostrar o produto INTEIRO, sem cortar. Quando o serviço estiver marcado [SEM IMAGEM], renderize o card NORMALMENTE só com título e descrição, SEM espaço reservado, SEM placeholder e SEM quebrar o layout — cada card é independente (uns podem ter foto e outros não, e o grid deve ficar alinhado mesmo assim). TODO o conteúdo de texto do card CENTRALIZADO (title e descrição). OBRIGATÓRIO: quando um serviço tiver descrição fornecida, copie o texto EXATAMENTE como está — proibido parafrasear, resumir, reescrever ou alterar a descrição.
 4. <section id="sobre"> — título CENTRALIZADO criativo e específico ao segmento (PROIBIDO usar frases genéricas como "Atendimento humanizado", "com resultados reais" ou similares — crie um título relevante ao nicho), números destacados (${data.anosNoMercado} anos, ${data.totalClientes ? `${data.totalClientes}+ ${data.totalClientesLabel || 'clientes atendidos'}` : 'experiência'})${data.certificados ? ', certificações' : ''}${fotosProfissionais.length > 0 ? `, ${fotosProfissionais.length > 1 ? `as ${fotosProfissionais.length} fotos do profissional em uma galeria/grade` : 'foto do profissional em destaque'} com object-fit:cover; object-position:top center; border-radius:12px` : ''}. NÃO inclua registros profissionais (CRO, CRM, OAB, CREA, etc.) entre os números/cards de destaque desta seção — esses registros aparecem SOMENTE no rodapé. Use APENAS números REAIS fornecidos (anos no mercado, total de clientes, certificações) nos cards de destaque. NÃO invente estatísticas genéricas ou óbvias como "100% foco no paciente", "100% de satisfação", "5 estrelas", "atendimento humanizado" — só dados concretos e reais.
 5. ${[data.foto1Url, data.foto2Url, data.foto3Url].filter(Boolean).length > 0 ? `<section id="espaco"> — título e subtítulo CENTRALIZADOS, galeria com as fotos do negócio. LAYOUT OBRIGATÓRIO: no mobile (padrão, sem @media) as fotos devem ficar em coluna única, cada uma ocupando 100% da largura (display:flex; flex-direction:column; gap:16px). No desktop (@media min-width:768px) pode usar grid de 2 ou 3 colunas. Cada foto: width:100%; height:auto; object-fit:contain; border-radius:12px — mostre a imagem INTEIRA, sem cortar (NÃO use aspect-ratio fixo nem object-fit:cover na galeria). Use as URLs exatas fornecidas.` : '<!-- sem galeria de fotos -->'}
@@ -332,8 +332,9 @@ REGRA GLOBAL DE BOTÕES: NUNCA coloque emojis dentro de botões CTA (hero, seç�
 
 REQUISITOS TÉCNICOS:
 - Mobile-first responsivo (breakpoint principal: 768px)
-- Google Font 'Inter' via @import no CSS (pesos 400;500;600;700;800)
+- Fontes: ver a seção DESIGN PREMIUM abaixo (duas famílias). NÃO carregue só Inter.
 - Botão WhatsApp flutuante fixo (canto inferior direito): position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.2). Use o SVG oficial do WhatsApp inline: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>. NUNCA use emoji 💬 no botão flutuante.
+
 DESIGN PREMIUM (OBRIGATÓRIO — siga à risca, é o padrão aprovado):
 
 FONTES (duas famílias, papéis distintos — este é o item mais importante):
